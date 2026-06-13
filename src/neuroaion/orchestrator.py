@@ -12,7 +12,7 @@ from .agents import (DataExtractor, DeduplicationAgent, DualScreenAdjudicator,
                      EvidenceSynthesizer, FullTextEligibility, PRISMAReporter,
                      ProtocolArchitect, RiskOfBiasAssessor, SearchStrategist,
                      TitleAbstractScreener)
-from .llm import get_provider
+from .llm import build_provider, get_provider
 from .models import Decision, Record, ReviewState
 from .prisma import compute_flow
 from .report import compile_pdf as _compile_pdf
@@ -28,6 +28,7 @@ class Orchestrator:
                  fulltext_retriever: Optional[FullTextRetriever] = None,
                  fetch_fulltext: Optional[bool] = None,
                  make_latex: bool = True, compile_pdf: bool = True,
+                 stop_after: Optional[str] = None, from_state: Optional[ReviewState] = None,
                  logger: Optional[Callable[[str], None]] = None):
         self.seed = seed
         self.mock = mock or not config.have_api_key()
@@ -36,6 +37,14 @@ class Orchestrator:
         self.model = model or config.DEFAULT_MODEL
         self.max_workers = max_workers or config.MAX_WORKERS
         self.provider = get_provider(self.mock, self.model)
+        # A cheaper, high-throughput provider can drive screening (e.g. DeepSeek)
+        # while the default provider handles redaction.
+        self.screen_provider = self.provider
+        if not self.mock and config.SCREEN_PROVIDER:
+            self.screen_provider = build_provider(config.SCREEN_PROVIDER,
+                                                  config.SCREEN_MODEL or None)
+        self.stop_after = stop_after
+        self.from_state = from_state
         self._log_fn = logger or (lambda m: print(m, file=sys.stderr, flush=True))
 
         # Full-text retrieval (PRISMA "reports sought / retrieved"). On a host with
@@ -61,6 +70,15 @@ class Orchestrator:
 
     # ── Pipeline ─────────────────────────────────────────────────────────────
     def run(self, out_root: str | Path = "runs") -> ReviewState:
+        # Resume mode: a prior screening checkpoint was supplied — pick up at
+        # eligibility (the "redaction" half), typically with a premium provider.
+        if self.from_state is not None:
+            state = self.from_state
+            out_dir = Path(out_root) / (state.run_id + "-writeup")
+            self.log(f"Resuming from checkpoint: {len(state.included_after_screening)} "
+                     f"screened-in records → write-up.", state)
+            return self._finish(state, out_dir, state.protocol)
+
         run_id = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
         out_dir = Path(out_root) / run_id
 
@@ -92,6 +110,19 @@ class Orchestrator:
                  f"{len(state.included_after_screening)} records retained for full text.", state)
         self._checkpoint(out_dir, state)
 
+        # Handoff: stop after screening so a different "brain" (premium model, or
+        # Claude in cowork) performs the redaction half from this checkpoint.
+        if self.stop_after == "screen":
+            self._write_handoff(out_dir, state)
+            self.log(f"⏸ Stopped after screening. {len(state.included_after_screening)} "
+                     f"records exported → {out_dir / 'screening_handoff.json'} "
+                     f"(resume with --from-state).", state)
+            return state
+
+        return self._finish(state, out_dir, protocol)
+
+    def _finish(self, state: ReviewState, out_dir: Path, protocol) -> ReviewState:
+        out_dir.mkdir(parents=True, exist_ok=True)
         # Agent 6 — full-text retrieval + eligibility
         if self.retriever is not None:
             self.log("[6/10] FullTextEligibility · retrieving reports (PMC / Europe PMC) …", state)
@@ -159,8 +190,8 @@ class Orchestrator:
         return records
 
     def _screen(self, state: ReviewState) -> None:
-        screener = TitleAbstractScreener(self.provider, state.protocol)
-        adjudicator = DualScreenAdjudicator(self.provider, state.protocol)
+        screener = TitleAbstractScreener(self.screen_provider, state.protocol)
+        adjudicator = DualScreenAdjudicator(self.screen_provider, state.protocol)
         records = state.unique_records
 
         def dual(rec: Record):
@@ -240,3 +271,18 @@ class Orchestrator:
     def _checkpoint(self, out_dir: Path, state: ReviewState) -> None:
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "state.json").write_text(state.model_dump_json(indent=2), encoding="utf-8")
+
+    def _write_handoff(self, out_dir: Path, state: ReviewState) -> None:
+        """Export the screened-in records for the redaction half (cowork or resume)."""
+        import json
+        out_dir.mkdir(parents=True, exist_ok=True)
+        by_uid = {r.uid: r for r in state.unique_records}
+        payload = [
+            {"uid": u, "title": by_uid[u].title, "abstract": by_uid[u].abstract,
+             "doi": by_uid[u].doi, "url": by_uid[u].url, "source": by_uid[u].source,
+             "source_id": by_uid[u].source_id, "year": by_uid[u].year}
+            for u in state.included_after_screening if u in by_uid
+        ]
+        (out_dir / "screening_handoff.json").write_text(
+            json.dumps(payload, indent=2), encoding="utf-8")
+        self._checkpoint(out_dir, state)

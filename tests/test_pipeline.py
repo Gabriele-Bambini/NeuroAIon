@@ -76,6 +76,27 @@ def test_injected_fulltext_retriever_is_used(tmp_path: Path):
     assert state.prisma.reports_not_retrieved == 0
 
 
+def test_screen_then_resume_handoff(tmp_path: Path):
+    """Split run: stop after screening (cheap model) → export → resume (redaction)."""
+    # Phase 1 — screening only, with a handoff export.
+    o1 = Orchestrator(SEED, mock=True, live_sources=False, max_workers=4,
+                      stop_after="screen")
+    s1 = o1.run(out_root=tmp_path)
+    run_dir = tmp_path / s1.run_id
+    assert (run_dir / "screening_handoff.json").exists()
+    assert not (run_dir / "report.md").exists()      # redaction not done yet
+    assert s1.included_after_screening and not s1.included_studies
+
+    # Phase 2 — resume the redaction half from the checkpoint.
+    o2 = Orchestrator(SEED, mock=True, live_sources=False, max_workers=4,
+                      from_state=s1)
+    s2 = o2.run(out_root=tmp_path)
+    write_dir = tmp_path / (s1.run_id + "-writeup")
+    assert (write_dir / "report.md").exists()
+    assert (write_dir / "paper.tex").exists()
+    assert s2.prisma.studies_included == len(s2.included_studies)
+
+
 def test_determinism_mock(tmp_path: Path):
     """Mock runs are deterministic given identical input → same selection counts."""
     s1 = Orchestrator(SEED, mock=True, live_sources=False, max_workers=2).run(tmp_path / "a")

@@ -17,8 +17,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command")
 
     run = sub.add_parser("run", help="Run a full systematic review from a protocol file.")
-    run.add_argument("--protocol", "-p", required=True,
-                     help="Path to a YAML protocol seed file.")
+    run.add_argument("--protocol", "-p",
+                     help="Path to a YAML protocol seed file (omit only with --from-state).")
     run.add_argument("--out", "-o", default="runs", help="Output root directory.")
     run.add_argument("--model", default=None, help=f"Model (default {config.DEFAULT_MODEL}).")
     run.add_argument("--workers", type=int, default=None, help="Concurrent screening workers.")
@@ -32,6 +32,14 @@ def main(argv: list[str] | None = None) -> int:
                      help="Skip LaTeX paper generation.")
     run.add_argument("--no-pdf", action="store_true",
                      help="Generate paper.tex but do not attempt local PDF compilation.")
+    run.add_argument("--provider", help="LLM backend: anthropic | deepseek | openai | custom | mock.")
+    run.add_argument("--screen-provider",
+                     help="Separate backend for the high-volume screening stage (e.g. deepseek).")
+    run.add_argument("--screen-model", help="Model id for the screening provider (e.g. DeepSeek V4 Pro).")
+    run.add_argument("--stop-after", choices=["screen"],
+                     help="Stop after screening and export the included set for write-up.")
+    run.add_argument("--from-state",
+                     help="Resume the redaction half from a screening checkpoint (state.json).")
 
     sub.add_parser("agents", help="List the ten agents and their PRISMA responsibilities.")
 
@@ -45,19 +53,45 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "run":
-        seed = config.load_protocol_file(args.protocol)
+        # Provider routing overrides (mutate config so factories pick them up).
+        if args.provider:
+            config.PROVIDER = args.provider.strip().lower()
+        if args.screen_provider:
+            config.SCREEN_PROVIDER = args.screen_provider.strip().lower()
+        if args.screen_model:
+            config.SCREEN_MODEL = args.screen_model.strip()
+
+        from_state = None
+        if args.from_state:
+            from .models import ReviewState
+            from_state = ReviewState.model_validate_json(Path(args.from_state).read_text())
+            seed: dict = {}
+        elif args.protocol:
+            seed = config.load_protocol_file(args.protocol)
+        else:
+            run.error("provide --protocol (or --from-state to resume).")
+
         live = True if args.live_sources else None
         fetch_ft = False if args.no_fulltext else None
         orch = Orchestrator(
             seed, mock=args.mock, live_sources=live,
             model=args.model, max_workers=args.workers, fetch_fulltext=fetch_ft,
             make_latex=not args.no_latex, compile_pdf=not args.no_pdf,
+            stop_after=args.stop_after, from_state=from_state,
         )
         if orch.mock:
             print("ℹ  Running in MOCK mode (no ANTHROPIC_API_KEY). "
                   "Set the key for a real, model-authored review.", file=sys.stderr)
         state = orch.run(out_root=args.out)
-        print(f"\nDone → {Path(args.out) / state.run_id / 'report.md'}")
+        base = Path(args.out)
+        if args.stop_after == "screen":
+            d = base / state.run_id
+            print(f"\nScreening checkpoint → {d}/  "
+                  f"(resume the write-up with:  --from-state {d}/state.json)")
+        elif args.from_state:
+            print(f"\nDone → {base / (state.run_id + '-writeup') / 'report.md'}")
+        else:
+            print(f"\nDone → {base / state.run_id / 'report.md'}")
         return 0
 
     parser.print_help()

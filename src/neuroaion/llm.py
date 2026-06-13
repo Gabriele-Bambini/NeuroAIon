@@ -107,6 +107,73 @@ class AnthropicProvider(LLMProvider):
         return "".join(b.text for b in final.content if b.type == "text")
 
 
+# ── OpenAI-compatible provider (DeepSeek V-series, OpenAI, Qwen, local...) ────
+class OpenAICompatibleProvider(LLMProvider):
+    """Any chat backend exposing the OpenAI ``/chat/completions`` schema.
+
+    Structured output is obtained via JSON mode (``response_format`` =
+    ``json_object``) plus the schema embedded in the prompt and Pydantic-free
+    ``json.loads`` validation with one repair retry — these backends do not offer
+    Anthropic's guaranteed json_schema enforcement. Designed for cheap, high-volume
+    work such as title/abstract screening.
+    """
+
+    def __init__(self, *, base_url: str, api_key: str, model: str):
+        import requests  # already a dependency
+
+        self._requests = requests
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.model = model
+
+    def _post(self, messages: list[dict], *, max_tokens: int, json_mode: bool) -> str:
+        url = f"{self.base_url}/chat/completions"
+        body: dict[str, Any] = {
+            "model": self.model, "messages": messages, "max_tokens": max_tokens,
+            "temperature": 0,
+        }
+        if json_mode:
+            body["response_format"] = {"type": "json_object"}
+        headers = {"Authorization": f"Bearer {self.api_key}",
+                   "Content-Type": "application/json"}
+        resp = self._requests.post(url, json=body, headers=headers, timeout=180)
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+
+    @retry(reraise=True, stop=stop_after_attempt(5),
+           wait=wait_exponential(multiplier=2, min=2, max=30))
+    def complete_json(self, *, system, user, schema, cache_prefix=None, max_tokens=8000):
+        sys_text = (cache_prefix + "\n\n" + system) if cache_prefix else system
+        sys_text += ("\n\nReturn ONLY a single JSON object that conforms to this "
+                     "JSON Schema (no prose, no markdown fences):\n" + json.dumps(schema))
+        messages = [{"role": "system", "content": sys_text},
+                    {"role": "user", "content": user}]
+        text = self._post(messages, max_tokens=max_tokens, json_mode=True)
+        return _parse_json_lenient(text)
+
+    @retry(reraise=True, stop=stop_after_attempt(5),
+           wait=wait_exponential(multiplier=2, min=2, max=30))
+    def complete_text(self, *, system, user, cache_prefix=None, max_tokens=16000):
+        sys_text = (cache_prefix + "\n\n" + system) if cache_prefix else system
+        messages = [{"role": "system", "content": sys_text},
+                    {"role": "user", "content": user}]
+        return self._post(messages, max_tokens=max_tokens, json_mode=False)
+
+
+def _parse_json_lenient(text: str) -> dict[str, Any]:
+    """Parse a JSON object that may be wrapped in markdown fences or stray prose."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.MULTILINE).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        start, end = text.find("{"), text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            return json.loads(text[start:end + 1])
+        raise
+
+
 # ── Deterministic mock provider ──────────────────────────────────────────────
 class MockProvider(LLMProvider):
     """Generates schema-valid placeholder content without any network call.
@@ -195,7 +262,25 @@ def _extract_record_title(context: str) -> str:
     return ""
 
 
-def get_provider(mock: bool, model: str | None = None) -> LLMProvider:
-    if mock or not config.have_api_key():
+def build_provider(name: str, model: str | None = None) -> LLMProvider:
+    """Construct a provider by name: anthropic | deepseek | openai | custom | mock."""
+    import os
+
+    if name == "mock":
         return MockProvider()
-    return AnthropicProvider(model=model)
+    if name == "anthropic":
+        return AnthropicProvider(model=model)
+    base, keyenv, default_model = config.OPENAI_COMPATIBLE.get(
+        name, config.OPENAI_COMPATIBLE["custom"])
+    api_key = os.environ.get(keyenv, "").strip()
+    if not base or not api_key:
+        return MockProvider()
+    return OpenAICompatibleProvider(base_url=base, api_key=api_key,
+                                    model=model or default_model)
+
+
+def get_provider(mock: bool, model: str | None = None) -> LLMProvider:
+    """Default provider for the run, honouring NEUROAION_PROVIDER."""
+    if mock:
+        return MockProvider()
+    return build_provider(config.PROVIDER, model or config.DEFAULT_MODEL)

@@ -99,6 +99,46 @@ meta-analysis model (`random`/`fixed`), and the risk-of-bias tool. Anything you
 leave as `auto` or blank is filled in by the ProtocolArchitect; anything you
 specify is honoured verbatim.
 
+## Hybrid model routing — cheap screening, premium redaction
+
+Screening is high-volume and low-stakes; redaction (extraction, synthesis,
+manuscript) is low-volume and high-stakes. The engine lets you run each on a
+different backend — e.g. a cheap **DeepSeek** model screens *every* record, then
+a premium model (or **Claude in cowork**) writes up only the included studies.
+
+Any **OpenAI-compatible** backend works (DeepSeek, OpenAI, Qwen, local
+vLLM/Ollama) — you set the model id, so even models newer than this README are
+supported.
+
+```bash
+# One-shot: DeepSeek for screening, Claude Opus for everything else.
+export ANTHROPIC_API_KEY=...   DEEPSEEK_API_KEY=...
+python scripts/run_review.py -p config/protocol.example.yaml \
+    --provider anthropic --screen-provider deepseek --screen-model <deepseek-model-id>
+```
+
+### Two-phase handoff (cowork)
+
+Run screening headless on the cheap model, then redact separately — the included
+set is exported to `screening_handoff.json` and the run resumes from the
+checkpoint:
+
+```bash
+# Phase 1 — cheap model screens all records, then stops.
+python scripts/run_review.py -p protocol.yaml \
+    --provider deepseek --screen-model <id> --stop-after screen
+#   → runs/<ts>/screening_handoff.json  +  state.json
+
+# Phase 2 — redact the included studies (premium model, or Claude in cowork).
+python scripts/run_review.py --from-state runs/<ts>/state.json
+#   → runs/<ts>-writeup/paper.tex, report.md, prospero_registration.md
+```
+
+| Stage | Volume | Suggested backend | Why |
+|-------|--------|-------------------|-----|
+| Screening | high (every record) | DeepSeek / Haiku | cheap, fast, good enough |
+| Redaction | low (included only) | Claude Opus / cowork | judgement & writing quality |
+
 ## Full-text retrieval (PRISMA 16b)
 
 Eligibility, data extraction and risk-of-bias are run on the **full text** of each

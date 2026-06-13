@@ -13,6 +13,22 @@ load_dotenv()
 DEFAULT_MODEL = os.environ.get("NEUROAION_MODEL", "claude-opus-4-8")
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+
+# Provider selection. "anthropic" (default) or any OpenAI-compatible backend
+# ("deepseek", "openai", "custom"). A separate provider can drive the high-volume
+# screening stage (e.g. DeepSeek) while a premium model handles redaction.
+PROVIDER = os.environ.get("NEUROAION_PROVIDER", "anthropic").strip().lower()
+SCREEN_PROVIDER = os.environ.get("NEUROAION_SCREEN_PROVIDER", "").strip().lower()
+SCREEN_MODEL = os.environ.get("NEUROAION_SCREEN_MODEL", "").strip()
+
+# OpenAI-compatible endpoints (DeepSeek V-series, OpenAI, Qwen, local vLLM/Ollama...).
+# base_url + key env + default model, per provider name.
+OPENAI_COMPATIBLE = {
+    "deepseek": ("https://api.deepseek.com", "DEEPSEEK_API_KEY", "deepseek-chat"),
+    "openai": ("https://api.openai.com/v1", "OPENAI_API_KEY", "gpt-4.1-mini"),
+    "custom": (os.environ.get("NEUROAION_BASE_URL", ""), "NEUROAION_API_KEY", ""),
+}
+
 NCBI_API_KEY = os.environ.get("NCBI_API_KEY", "").strip()
 CONTACT_EMAIL = os.environ.get("NEUROAION_CONTACT_EMAIL", "").strip() or "neuroaion@example.org"
 MAX_WORKERS = int(os.environ.get("NEUROAION_MAX_WORKERS", "8"))
@@ -22,8 +38,11 @@ USER_AGENT = f"NeuroAIon/0.1 (systematic-review-engine; mailto:{CONTACT_EMAIL})"
 
 
 def have_api_key() -> bool:
-    """True if a live Anthropic key is configured. Otherwise the engine runs mock."""
-    return bool(ANTHROPIC_API_KEY)
+    """True if a live LLM backend is configured. Otherwise the engine runs mock."""
+    if PROVIDER == "anthropic":
+        return bool(ANTHROPIC_API_KEY)
+    base, keyenv, _ = OPENAI_COMPATIBLE.get(PROVIDER, OPENAI_COMPATIBLE["custom"])
+    return bool(os.environ.get(keyenv, "").strip())
 
 
 def load_protocol_file(path: str | Path) -> dict:
