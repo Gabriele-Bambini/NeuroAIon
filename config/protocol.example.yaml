@@ -36,7 +36,11 @@ exclusion_criteria:
 
 # Search configuration (PRISMA item 6–7).
 search:
-  sources: ["pubmed", "europepmc", "crossref", "openalex", "biorxiv"]
+  # All sources are free / open (no paid keys). Available:
+  #   pubmed, europepmc, crossref, openalex, biorxiv,
+  #   clinicaltrials, doaj, semanticscholar, arxiv
+  sources: ["pubmed", "europepmc", "crossref", "openalex", "biorxiv",
+            "clinicaltrials", "doaj", "semanticscholar"]
   date_from: "2010-01-01"
   date_to: "auto"            # 'auto' = today
   languages: ["en"]
@@ -52,6 +56,7 @@ synthesis:
   effect_measure: "SMD"     # SMD | MD | OR | RR | HR
   model: "random"           # random (DerSimonian–Laird) | fixed
   min_studies_for_meta: 2
+  publication_bias: true    # Egger's test + funnel plot (PRISMA item 14)
 
 # Risk-of-bias appraisal (PRISMA item 11).
 risk_of_bias:
@@ -62,3 +67,4 @@ risk_of_bias:
 reporting:
   authors_contact: "02gabrielebambini@gmail.com"
   registration: "Not registered (to be registered on PROSPERO)"
+  prospero_export: true     # write a ready-to-submit PROSPERO registration form

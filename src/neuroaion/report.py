@@ -60,6 +60,18 @@ def _forest_table(state: ReviewState) -> str:
     return "\n".join(rows)
 
 
+def _pub_bias_line(state: ReviewState) -> str:
+    meta = state.synthesis.meta_analysis
+    if not meta or meta.eggers_p is None:
+        return ("Not formally tested (fewer than three studies with usable "
+                "variances); a funnel plot is provided in the LaTeX paper where applicable.")
+    asym = "evidence of" if meta.eggers_p < 0.10 else "no strong evidence of"
+    power = " (under-powered, k<10)" if (meta.eggers_k or 0) < 10 else ""
+    return (f"Egger's test: {asym} funnel asymmetry "
+            f"(intercept={meta.eggers_intercept}, p={meta.eggers_p}, k={meta.eggers_k}){power}. "
+            f"See the funnel plot in `paper.tex`.")
+
+
 def _references(state: ReviewState) -> str:
     included = {u for u in state.included_studies}
     by_uid = {r.uid: r for r in state.unique_records}
@@ -157,6 +169,8 @@ structured form and each included study was appraised with **{p.risk_of_bias.too
 
 {state.synthesis.narrative.strip()}
 
+**Publication bias (PRISMA 14).** {_pub_bias_line(state)}
+
 ### 3.5 Certainty of evidence (GRADE, PRISMA 22)
 
 **Certainty: {state.synthesis.grade_certainty or 'not rated'}.** {state.synthesis.grade_rationale}
@@ -218,6 +232,12 @@ def write_artifacts(out_dir: Path, state: ReviewState, prose: dict[str, str]) ->
         if r:
             w.writerow([uid, r.citation(), r.doi, r.source, r.year])
     (out_dir / "included_studies.csv").write_text(buf.getvalue(), encoding="utf-8")
+
+    # PROSPERO registration export (PRISMA item 24).
+    if state.protocol.prospero_export:
+        from . import prospero
+        (out_dir / "prospero_registration.md").write_text(
+            prospero.build_registration(state), encoding="utf-8")
 
     return report_path
 

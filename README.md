@@ -7,11 +7,17 @@
 
 A conductor orchestrates **ten specialised agents** (Claude Opus 4.8) through the
 entire systematic-review workflow. Every deterministic computation —
-de-duplication, meta-analysis, PRISMA flow counts, Cohen's κ — is done in Python;
-the language model is used only for judgement and narrative, **never** to invent
-statistics. The engine pulls records from real open literature APIs (PubMed,
-Europe PMC, Crossref, OpenAlex, bioRxiv/medRxiv) and writes a complete,
-reproducible audit trail.
+de-duplication, meta-analysis, heterogeneity, **Egger's test**, PRISMA flow
+counts, Cohen's κ — is done in Python; the language model is used only for
+judgement and narrative, **never** to invent statistics. The engine pulls records
+from **nine free / open** literature sources and writes a complete, reproducible
+audit trail.
+
+**100% free sources (no paid keys):** PubMed · Europe PMC · Crossref · OpenAlex ·
+bioRxiv/medRxiv · **ClinicalTrials.gov** · **DOAJ** · **Semantic Scholar** ·
+**arXiv**. Full text is retrieved from PMC open-access + Europe PMC, with an
+optional Unpaywall→PDF path (`pip install neuroaion[oa]`). Everything is toggled
+from the protocol file — *full optional*.
 
 ```
 ProtocolArchitect → SearchStrategist → DeduplicationAgent → TitleAbstractScreener
@@ -62,6 +68,7 @@ Outputs land in `runs/<timestamp>/`:
 | `prisma_flow.json` | PRISMA flow counts |
 | `extractions.json` | Structured data-extraction records |
 | `included_studies.csv` | Final included set with citations + DOIs |
+| `prospero_registration.md` | Ready-to-submit PROSPERO registration form (PRISMA 24) |
 
 ### Compile the PDF
 
@@ -185,8 +192,8 @@ PRISMA-flow consistency, and an end-to-end offline pipeline smoke + determinism 
 
 ## Roadmap
 
-- PROSPERO protocol registration export.
-- Funnel-plot / Egger's test for small-study effects (PRISMA 14).
+- Network / multivariate meta-analysis.
+- Subgroup and meta-regression analyses.
 
 ## Disclaimer
 

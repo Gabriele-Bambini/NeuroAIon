@@ -38,3 +38,25 @@ def test_cohen_kappa_perfect_and_chance():
     assert cohen_kappa(["a", "b", "a"], ["a", "b", "a"]) == 1.0
     k = cohen_kappa(["a", "b", "a", "b"], ["b", "a", "b", "a"])
     assert k is not None and k < 0  # systematic disagreement
+
+
+def test_eggers_and_funnel():
+    from neuroaion.models import EffectEstimate
+    from neuroaion.stats import eggers_test, funnel_points
+
+    # Asymmetric: small (imprecise) studies have larger effects → asymmetry.
+    asym = [
+        EffectEstimate(estimate=0.2, se=0.05),
+        EffectEstimate(estimate=0.3, se=0.10),
+        EffectEstimate(estimate=0.6, se=0.30),
+        EffectEstimate(estimate=0.9, se=0.45),
+        EffectEstimate(estimate=1.2, se=0.60),
+    ]
+    res = eggers_test(asym)
+    assert res is not None
+    assert res["k"] == 5 and res["underpowered"] is True
+    assert "intercept" in res and "p" in res
+
+    assert funnel_points(asym, "SMD")[0]["se"] == 0.05
+    # Fewer than three usable studies → no test.
+    assert eggers_test(asym[:2]) is None

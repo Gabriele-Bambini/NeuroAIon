@@ -234,6 +234,64 @@ def forest_tikz(meta: Optional[MetaAnalysisResult]) -> str:
     return "".join(L)
 
 
+def funnel_tikz(meta: Optional[MetaAnalysisResult]) -> str:
+    """A funnel plot (effect vs. standard error) with a pseudo-95% CI funnel."""
+    if not meta or not meta.funnel or meta.pooled_estimate is None:
+        return ""
+    pts = meta.funnel
+    ses = [p["se"] for p in pts]
+    max_se = max(ses) if ses else 1.0
+    if max_se <= 0:
+        max_se = 1.0
+    pooled = meta.pooled_estimate
+    xs = [p["estimate"] for p in pts] + [pooled - 1.96 * max_se, pooled + 1.96 * max_se]
+    lo, hi = min(xs), max(xs)
+    if hi <= lo:
+        hi = lo + 1.0
+    pad = (hi - lo) * 0.1
+    lo, hi = lo - pad, hi + pad
+    W, H = 8.0, 5.5
+
+    def X(v: float) -> float:
+        return (v - lo) / (hi - lo) * W
+
+    def Y(se: float) -> float:
+        return H * (1.0 - se / max_se)   # SE=0 at top, max SE at bottom
+
+    L = ["\\begin{figure}[H]\n\\centering\n",
+         "\\begin{tikzpicture}[x=1cm,y=1cm,font=\\scriptsize,>=Stealth]\n"]
+    # Axes.
+    L.append(f"\\draw[->] (0,0) -- ({W + 0.3:.3f},0) node[right] {{{esc(meta.measure)}}};\n")
+    L.append(f"\\draw[->] ({X(pooled):.3f},0) -- ({X(pooled):.3f},{H + 0.3:.3f}) "
+             f"node[above] {{precision}};\n")
+    # Pseudo 95% CI funnel (triangle from pooled apex at SE=0 widening downward).
+    apex_x, apex_y = X(pooled), Y(0.0)
+    lx, ly = X(pooled - 1.96 * max_se), Y(max_se)
+    rx, ry = X(pooled + 1.96 * max_se), Y(max_se)
+    L.append(f"\\draw[dashed,gray] ({apex_x:.3f},{apex_y:.3f}) -- ({lx:.3f},{ly:.3f});\n")
+    L.append(f"\\draw[dashed,gray] ({apex_x:.3f},{apex_y:.3f}) -- ({rx:.3f},{ry:.3f});\n")
+    L.append(f"\\draw[dotted] ({X(pooled):.3f},0) -- ({X(pooled):.3f},{H:.3f});\n")
+    # Study points.
+    for p in pts:
+        L.append(f"\\fill ({X(p['estimate']):.3f},{Y(p['se']):.3f}) circle (1.6pt);\n")
+    L.append("\\end{tikzpicture}\n")
+    L.append("\\caption{Funnel plot of effect size against precision (apex = pooled "
+             "estimate; dashed lines = pseudo 95\\% confidence funnel).}\n\\end{figure}\n")
+    return "".join(L)
+
+
+def _publication_bias_text(meta: Optional[MetaAnalysisResult]) -> str:
+    if not meta or meta.eggers_p is None:
+        return ("Publication bias was not formally tested (fewer than three studies "
+                "with usable variances).")
+    asym = "evidence of" if meta.eggers_p < 0.10 else "no strong evidence of"
+    power = " Note that with $k<10$ the test is under-powered." \
+        if (meta.eggers_k or 0) < 10 else ""
+    return (f"Egger's regression test indicated {asym} funnel asymmetry "
+            f"(intercept $={meta.eggers_intercept}$, $p={meta.eggers_p}$, "
+            f"$k={meta.eggers_k}$).{power}")
+
+
 def _characteristics_longtable(state: ReviewState, keys: dict[str, str]) -> str:
     rob = {r.uid: r.overall for r in state.rob}
     head = (
@@ -362,6 +420,8 @@ def build_document(state: ReviewState, prose: dict[str, str]) -> tuple[str, str]
         + "\\subsection{Risk of bias within studies}\n" + _rob_longtable(state) + "\n"
         + "\\subsection{Synthesis of results}\n" + forest_tikz(meta) + "\n"
         + esc(s.narrative) + "\n"
+        + "\\subsection{Publication bias (PRISMA item 14)}\n"
+        + funnel_tikz(meta) + "\n" + _publication_bias_text(meta) + "\n"
         + "\\subsection{Certainty of evidence (GRADE)}\n"
         + f"\\textbf{{Certainty: {esc(s.grade_certainty or 'not rated')}.}} "
         + esc(s.grade_rationale) + "\n"

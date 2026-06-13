@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from ..models import (ExtractionRecord, MetaAnalysisResult, RoBAssessment,
                       Synthesis)
-from ..stats import meta_analyze
+from ..stats import eggers_test, funnel_points, meta_analyze
 from .base import Agent, obj
 
 
@@ -32,6 +32,15 @@ class EvidenceSynthesizer(Agent):
         if len(effects) >= cfg.min_studies_for_meta:
             meta = meta_analyze(effects, measure=cfg.effect_measure,
                                 model=cfg.model, labels=labels)
+
+        # Publication-bias assessment (PRISMA item 14): Egger's test + funnel data.
+        if meta and cfg.publication_bias:
+            meta.funnel = funnel_points(effects, cfg.effect_measure)
+            eg = eggers_test(effects)
+            if eg:
+                meta.eggers_intercept = eg["intercept"]
+                meta.eggers_p = eg["p"]
+                meta.eggers_k = eg["k"]
 
         # Build a compact evidence digest for the narrative writer.
         rob_overall = {r.uid: r.overall for r in rob}
@@ -85,11 +94,17 @@ class EvidenceSynthesizer(Agent):
             sig = meta.ci_lower is not None and meta.ci_upper is not None and (
                 meta.ci_lower > 0 or meta.ci_upper < 0
             )
+            egger = ""
+            if meta.eggers_p is not None:
+                asym = "evidence of" if meta.eggers_p < 0.10 else "no strong evidence of"
+                power = " (under-powered, k<10)" if (meta.eggers_k or 0) < 10 else ""
+                egger = (f" Egger's test showed {asym} funnel asymmetry "
+                         f"(intercept={meta.eggers_intercept}, p={meta.eggers_p}{power}).")
             meta.interpretation = (
                 f"The pooled effect {'reached' if sig else 'did not reach'} statistical "
                 f"significance; heterogeneity was "
-                f"{'low' if (meta.i_squared or 0) < 40 else 'substantial'} (I²="
-                f"{meta.i_squared}%)."
+                f"{'low' if (meta.i_squared or 0) < 40 else 'substantial'} (I-squared="
+                f"{meta.i_squared}%).{egger}"
             )
 
         return Synthesis(

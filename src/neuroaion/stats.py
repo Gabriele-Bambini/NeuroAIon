@@ -125,3 +125,54 @@ def cohen_kappa(a: list[str], b: list[str]) -> Optional[float]:
     if expected >= 1.0:
         return 1.0
     return round((observed - expected) / (1 - expected), 3)
+
+
+def funnel_points(effects: list[EffectEstimate],
+                  measure: str = "SMD") -> list[dict]:
+    """Per-study (effect, se) pairs for a funnel plot, on the analysis scale."""
+    out = []
+    log_scale = measure.upper() in {"OR", "RR", "HR"}
+    for e in effects:
+        u = _usable(e)
+        if u is not None:
+            y, se = u
+            out.append({"estimate": round(math.exp(y) if log_scale else y, 4),
+                        "se": round(se, 4)})
+    return out
+
+
+def eggers_test(effects: list[EffectEstimate]) -> Optional[dict]:
+    """Egger's regression test for small-study effects / funnel asymmetry.
+
+    Regresses the standard normal deviate (y_i / SE_i) on precision (1 / SE_i)
+    via OLS; a non-zero intercept indicates asymmetry. Returns the intercept,
+    its two-sided p-value, and k. Needs k >= 3 (and is under-powered below ~10).
+    """
+    import numpy as np
+
+    pts = [u for u in (_usable(e) for e in effects) if u is not None]
+    if len(pts) < 3:
+        return None
+    y = np.array([p[0] for p in pts], dtype=float)
+    se = np.array([p[1] for p in pts], dtype=float)
+    snd = y / se                 # standard normal deviate (response)
+    precision = 1.0 / se         # predictor
+    n = len(pts)
+    X = np.column_stack([np.ones(n), precision])
+    beta, *_ = np.linalg.lstsq(X, snd, rcond=None)
+    resid = snd - X @ beta
+    dof = n - 2
+    if dof <= 0:
+        return None
+    sigma2 = float(resid @ resid) / dof
+    try:
+        cov = sigma2 * np.linalg.inv(X.T @ X)
+    except np.linalg.LinAlgError:
+        return None
+    se_int = math.sqrt(max(cov[0, 0], 0.0))
+    if se_int == 0:
+        return None
+    t = beta[0] / se_int
+    p = float(2 * (1 - scipy_stats.t.cdf(abs(t), dof)))
+    return {"intercept": round(float(beta[0]), 4), "p": round(p, 4), "k": n,
+            "underpowered": n < 10}

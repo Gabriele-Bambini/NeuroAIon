@@ -22,6 +22,8 @@ from .base import http_get
 
 IDCONV = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
 EPMC_FULLTEXT = "https://www.ebi.ac.uk/europepmc/webservices/rest/{src}/{id}/fullTextXML"
+EPMC_SEARCH = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+UNPAYWALL = "https://api.unpaywall.org/v2/{doi}"
 
 
 @dataclass
@@ -87,17 +89,78 @@ def _fetch_epmc_fulltext(src: str, ext_id: str) -> str:
         return ""
 
 
+def _epmc_id_by_doi(doi: str) -> tuple[str, str]:
+    """Resolve a DOI to a Europe PMC (source, ext_id) with open full text, if any."""
+    try:
+        data = http_get(EPMC_SEARCH, {"query": f'DOI:"{doi}"', "format": "json",
+                                      "resultType": "core", "pageSize": 1}).json()
+        results = data.get("resultList", {}).get("result", [])
+        if not results:
+            return "", ""
+        r = results[0]
+        if r.get("pmcid") and r.get("isOpenAccess") == "Y":
+            return "PMC", r["pmcid"]
+        if r.get("source") == "PPR" and r.get("id"):
+            return "PPR", r["id"]
+    except Exception:  # noqa: BLE001
+        return "", ""
+    return "", ""
+
+
+def _unpaywall_pdf_text(doi: str, max_chars: int) -> str:
+    """If pypdf is installed, fetch the best OA PDF via Unpaywall and extract text.
+
+    Entirely optional and best-effort: needs ``pip install neuroaion[oa]`` and a
+    reachable PDF. Returns "" on any failure.
+    """
+    try:
+        import io
+        from pypdf import PdfReader  # optional dependency
+    except Exception:  # noqa: BLE001
+        return ""
+    try:
+        meta = http_get(UNPAYWALL.format(doi=doi),
+                        {"email": config.CONTACT_EMAIL}).json()
+        loc = meta.get("best_oa_location") or {}
+        pdf_url = loc.get("url_for_pdf") or loc.get("url")
+        if not pdf_url:
+            return ""
+        raw = http_get(pdf_url, accept="application/pdf").content
+        reader = PdfReader(io.BytesIO(raw))
+        text = "\n".join((p.extract_text() or "") for p in reader.pages)
+        return text.strip()[:max_chars]
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def retrieve(record: Record, *, max_chars: int = 40000) -> FullText:
     """Best-effort full-text retrieval for one record.
 
-    Order: PMC open-access full text → preprint full text → abstract fallback.
+    Order: PMC (NCBI id-map) → Europe PMC by DOI → Unpaywall OA PDF (optional)
+    → preprint full text → abstract fallback. All channels are free.
     """
-    # 1) Peer-reviewed open-access full text via PMC.
+    # 1) Peer-reviewed open-access full text via PMC (NCBI id-converter).
     pmcid = _resolve_pmcid(record)
     if pmcid:
         body = _fetch_epmc_fulltext("PMC", pmcid)
         if body:
             return FullText(text=body[:max_chars], retrieved=True, source="pmc", pmcid=pmcid)
+
+    # 1b) Europe PMC by DOI (covers OA full text not resolved via NCBI).
+    if record.doi:
+        src, ext = _epmc_id_by_doi(record.doi)
+        if src:
+            body = _fetch_epmc_fulltext(src, ext)
+            if body:
+                return FullText(text=body[:max_chars], retrieved=True,
+                                source="pmc" if src == "PMC" else "preprint",
+                                pmcid=ext if src == "PMC" else "")
+
+    # 1c) Unpaywall → OA PDF text (optional; requires pypdf).
+    if record.doi:
+        body = _unpaywall_pdf_text(record.doi, max_chars)
+        if body:
+            return FullText(text=body, retrieved=True, source="oa-pdf")
 
     # 2) Preprint full text (bioRxiv/medRxiv indexed in Europe PMC as PPR).
     if record.source == "biorxiv" and record.source_id:

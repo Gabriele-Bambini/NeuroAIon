@@ -29,6 +29,7 @@ class ProtocolArchitect(Agent):
             risk_of_bias=rob,
             registration=(seed.get("reporting") or {}).get("registration", "Not registered"),
             authors_contact=(seed.get("reporting") or {}).get("authors_contact", ""),
+            prospero_export=(seed.get("reporting") or {}).get("prospero_export", True),
         )
 
         # Let the model phrase the formal question and sanity-check the criteria,

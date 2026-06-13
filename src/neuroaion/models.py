@@ -35,6 +35,7 @@ class SynthesisConfig(BaseModel):
     effect_measure: str = "SMD"
     model: str = "random"
     min_studies_for_meta: int = 2
+    publication_bias: bool = True   # Egger's test + funnel plot (PRISMA item 14)
 
 
 class RoBConfig(BaseModel):
@@ -53,6 +54,7 @@ class ReviewProtocol(BaseModel):
     risk_of_bias: RoBConfig = Field(default_factory=RoBConfig)
     registration: str = "Not registered"
     authors_contact: str = ""
+    prospero_export: bool = True
 
     def criteria_block(self) -> str:
         """A compact, cache-friendly rendering of the eligibility contract."""
@@ -190,6 +192,11 @@ class MetaAnalysisResult(BaseModel):
     tau_squared: Optional[float] = None
     q_statistic: Optional[float] = None
     forest: list[dict[str, Any]] = Field(default_factory=list)   # per-study rows
+    # Publication-bias assessment (PRISMA item 14).
+    eggers_intercept: Optional[float] = None
+    eggers_p: Optional[float] = None
+    eggers_k: Optional[int] = None
+    funnel: list[dict[str, Any]] = Field(default_factory=list)   # {estimate, se}
     interpretation: str = ""
 
 
