@@ -1,0 +1,55 @@
+"""End-to-end smoke test of the full-auto pipeline in offline mock mode."""
+from pathlib import Path
+
+from neuroaion.orchestrator import Orchestrator
+
+SEED = {
+    "title": "tDCS and working memory: a test review",
+    "pico": {
+        "population": "Healthy adults",
+        "intervention": "Anodal tDCS over DLPFC",
+        "comparator": "Sham",
+        "outcome": "Working-memory performance",
+        "study_designs": ["randomized controlled trial"],
+    },
+    "question": "auto",
+    "inclusion_criteria": ["Human RCTs", "Reports a working-memory outcome"],
+    "exclusion_criteria": ["Animal studies", "Reviews"],
+    "search": {"sources": ["pubmed", "europepmc", "openalex"],
+               "max_records_per_source": 20,
+               "keywords": [["tDCS"], ["working memory"]]},
+    "synthesis": {"effect_measure": "SMD", "model": "random", "min_studies_for_meta": 2},
+    "risk_of_bias": {"tool": "RoB2", "grade": True},
+}
+
+
+def test_full_pipeline_mock(tmp_path: Path):
+    orch = Orchestrator(SEED, mock=True, live_sources=False, max_workers=4)
+    assert orch.mock is True
+    state = orch.run(out_root=tmp_path)
+
+    # Artefacts exist.
+    run_dir = tmp_path / state.run_id
+    for fname in ("report.md", "state.json", "prisma_flow.json",
+                  "included_studies.csv", "extractions.json"):
+        assert (run_dir / fname).exists(), f"missing {fname}"
+
+    # PRISMA flow is internally consistent.
+    f = state.prisma
+    assert f.records_total >= f.records_screened          # duplicates removed
+    assert f.records_screened == len(state.unique_records)
+    assert f.studies_included == len(state.included_studies)
+    assert f.studies_included <= f.reports_assessed + f.reports_not_retrieved
+
+    # The pipeline produced a usable report.
+    report = (run_dir / "report.md").read_text()
+    assert "PRISMA 2020 checklist" in report
+    assert "flowchart" in report  # mermaid flow diagram embedded
+
+
+def test_determinism_mock(tmp_path: Path):
+    """Mock runs are deterministic given identical input → same selection counts."""
+    s1 = Orchestrator(SEED, mock=True, live_sources=False, max_workers=2).run(tmp_path / "a")
+    s2 = Orchestrator(SEED, mock=True, live_sources=False, max_workers=2).run(tmp_path / "b")
+    assert s1.prisma.records_screened == s2.prisma.records_screened
+    assert len(s1.included_after_screening) == len(s2.included_after_screening)

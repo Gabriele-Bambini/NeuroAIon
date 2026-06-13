@@ -1,0 +1,64 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NeuroAIon review protocol (PRISMA 2020, item 4–7).
+#
+# This file *seeds* the review. The ProtocolArchitect agent will refine any
+# field left blank or marked `auto`, but anything you specify here is honoured
+# verbatim — your protocol is the contract the whole pipeline is held to.
+# ─────────────────────────────────────────────────────────────────────────────
+
+title: >-
+  Effects of transcranial direct current stimulation (tDCS) on working memory
+  in healthy adults: a systematic review and meta-analysis
+
+# The clinical/scientific question in structured form.
+# Use PICO (interventions) or PECO (exposures). Leave blank to let the agent draft it.
+pico:
+  population: "Healthy adults (18–65 years), no diagnosed neurological or psychiatric disorder"
+  intervention: "Anodal transcranial direct current stimulation (tDCS) over DLPFC"
+  comparator: "Sham stimulation"
+  outcome: "Working-memory performance (n-back accuracy / reaction time, digit span)"
+  study_designs: ["randomized controlled trial", "randomized crossover trial"]
+
+# Free-text question (optional; derived from PICO if omitted).
+question: auto
+
+# Eligibility criteria (PRISMA item 5). Add/remove freely.
+inclusion_criteria:
+  - "Peer-reviewed or preprint primary studies"
+  - "Human participants"
+  - "Reports at least one quantitative working-memory outcome"
+  - "Sham-controlled comparison available"
+exclusion_criteria:
+  - "Animal or in-silico studies"
+  - "Clinical populations (stroke, dementia, psychiatric diagnosis)"
+  - "Reviews, editorials, conference abstracts without data"
+  - "Non-DLPFC montage only"
+
+# Search configuration (PRISMA item 6–7).
+search:
+  sources: ["pubmed", "europepmc", "crossref", "openalex", "biorxiv"]
+  date_from: "2010-01-01"
+  date_to: "auto"            # 'auto' = today
+  languages: ["en"]
+  max_records_per_source: 200
+  # Seed keyword groups; SearchStrategist expands these into per-database Boolean queries.
+  keywords:
+    - ["tDCS", "transcranial direct current stimulation", "anodal stimulation"]
+    - ["working memory", "n-back", "digit span", "executive function"]
+    - ["DLPFC", "dorsolateral prefrontal cortex"]
+
+# Synthesis configuration (PRISMA item 13).
+synthesis:
+  effect_measure: "SMD"     # SMD | MD | OR | RR | HR
+  model: "random"           # random (DerSimonian–Laird) | fixed
+  min_studies_for_meta: 2
+
+# Risk-of-bias appraisal (PRISMA item 11).
+risk_of_bias:
+  tool: "RoB2"              # RoB2 | ROBINS-I | NewcastleOttawa
+  grade: true               # also produce a GRADE certainty rating
+
+# Reporting.
+reporting:
+  authors_contact: "02gabrielebambini@gmail.com"
+  registration: "Not registered (to be registered on PROSPERO)"

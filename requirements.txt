@@ -1,0 +1,20 @@
+# Core LLM orchestration
+anthropic>=0.69.0
+
+# Data modelling & config
+pydantic>=2.6
+PyYAML>=6.0
+python-dotenv>=1.0
+
+# Literature source clients
+requests>=2.31
+
+# Deduplication (fuzzy title/author matching)
+rapidfuzz>=3.6
+
+# Quantitative synthesis (meta-analysis)
+numpy>=1.26
+scipy>=1.11
+
+# Resilience
+tenacity>=8.2
