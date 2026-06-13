@@ -68,6 +68,42 @@ meta-analysis model (`random`/`fixed`), and the risk-of-bias tool. Anything you
 leave as `auto` or blank is filled in by the ProtocolArchitect; anything you
 specify is honoured verbatim.
 
+## Full-text retrieval (PRISMA 16b)
+
+Eligibility, data extraction and risk-of-bias are run on the **full text** of each
+record sought for retrieval, not just the abstract. The engine resolves a record
+(DOI/PMID) to a PubMed Central open-access full text — the same corpus the PMC MCP
+server exposes — and reconstructs readable body text from the JATS XML; preprints
+are pulled via Europe PMC. When no open-access full text exists, it falls back to
+the abstract and marks the report accordingly, so the PRISMA "reports not
+retrieved" count is real.
+
+Retrieval is **pluggable** so it works wherever the host can reach the data:
+
+| Channel | When | How |
+|---------|------|-----|
+| `HttpFullTextRetriever` (default) | Host with open egress (your machine, CI) | Direct HTTPS to NCBI ID-converter + Europe PMC `fullTextXML` |
+| `McpFullTextRetriever` | Agent host with the PMC / bioRxiv **MCP servers** | You inject the MCP tool callables; no direct outbound HTTP needed |
+
+```python
+from neuroaion.orchestrator import Orchestrator
+from neuroaion.sources import McpFullTextRetriever
+
+# Bind your MCP tools (e.g. the PMC server's convert_article_ids / get_full_text_article):
+retriever = McpFullTextRetriever(
+    convert_ids=lambda ids, idtype: mcp_convert_article_ids(ids, idtype),  # -> [{"pmcid": ...}]
+    get_full_text=lambda pmc_ids: mcp_get_full_text_article(pmc_ids),       # -> body text
+)
+Orchestrator(seed, fulltext_retriever=retriever).run()
+```
+
+Disable retrieval (assess from abstracts only) with `--no-fulltext`.
+
+> **Note on restricted environments.** In a sandbox with locked-down egress, direct
+> HTTP to NCBI/Europe PMC may be blocked (HTTP 403); there, inject an
+> `McpFullTextRetriever` bound to the approved MCP literature servers. The default
+> HTTP retriever works on any host with normal internet access.
+
 ## How it stays honest
 
 - **No fabricated numbers.** Pooled estimates, heterogeneity (DerSimonian–Laird
@@ -125,8 +161,6 @@ PRISMA-flow consistency, and an end-to-end offline pipeline smoke + determinism 
 
 ## Roadmap
 
-- Plug the live MCP servers (PubMed full-text, bioRxiv/medRxiv) into the source
-  layer for full-text eligibility and extraction.
 - PROSPERO protocol registration export.
 - Funnel-plot / Egger's test for small-study effects (PRISMA 14).
 - Optional `matplotlib` forest-plot rendering (`pip install neuroaion[viz]`).

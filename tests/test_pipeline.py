@@ -1,7 +1,9 @@
 """End-to-end smoke test of the full-auto pipeline in offline mock mode."""
 from pathlib import Path
 
+from neuroaion.models import Record
 from neuroaion.orchestrator import Orchestrator
+from neuroaion.sources import FullText
 
 SEED = {
     "title": "tDCS and working memory: a test review",
@@ -45,6 +47,33 @@ def test_full_pipeline_mock(tmp_path: Path):
     report = (run_dir / "report.md").read_text()
     assert "PRISMA 2020 checklist" in report
     assert "flowchart" in report  # mermaid flow diagram embedded
+
+
+class _FakeRetriever:
+    """An injectable retriever that returns 'full text' for every record — proves
+    the retrieval phase is wired into eligibility/extraction/risk-of-bias."""
+    def __init__(self):
+        self.calls = 0
+
+    def retrieve(self, record: Record) -> FullText:
+        self.calls += 1
+        return FullText(text=f"FULL TEXT BODY for {record.title}. " * 20,
+                        retrieved=True, source="pmc", pmcid="PMC999")
+
+
+def test_injected_fulltext_retriever_is_used(tmp_path: Path):
+    retr = _FakeRetriever()
+    orch = Orchestrator(SEED, mock=True, live_sources=False, max_workers=4,
+                        fulltext_retriever=retr)
+    state = orch.run(out_root=tmp_path)
+
+    # The retriever was invoked once per record sought for retrieval.
+    assert retr.calls == len(state.included_after_screening) > 0
+    # Eligibility decisions record that a full text (PMC) was retrieved.
+    assert all(e.full_text_retrieved for e in state.eligibility)
+    assert any("source: pmc/PMC999" in e.notes for e in state.eligibility)
+    # With full text retrieved for every report, none are 'not retrieved'.
+    assert state.prisma.reports_not_retrieved == 0
 
 
 def test_determinism_mock(tmp_path: Path):

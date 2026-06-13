@@ -26,6 +26,8 @@ def main(argv: list[str] | None = None) -> int:
                      help="Force offline mock run (no API key, synthetic corpus).")
     run.add_argument("--live-sources", action="store_true",
                      help="Query real literature APIs even in mock mode.")
+    run.add_argument("--no-fulltext", action="store_true",
+                     help="Skip full-text retrieval (assess from abstracts only).")
 
     sub.add_parser("agents", help="List the ten agents and their PRISMA responsibilities.")
 
@@ -41,9 +43,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "run":
         seed = config.load_protocol_file(args.protocol)
         live = True if args.live_sources else None
+        fetch_ft = False if args.no_fulltext else None
         orch = Orchestrator(
             seed, mock=args.mock, live_sources=live,
-            model=args.model, max_workers=args.workers,
+            model=args.model, max_workers=args.workers, fetch_fulltext=fetch_ft,
         )
         if orch.mock:
             print("ℹ  Running in MOCK mode (no ANTHROPIC_API_KEY). "

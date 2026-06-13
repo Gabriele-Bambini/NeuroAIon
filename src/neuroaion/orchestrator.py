@@ -16,13 +16,16 @@ from .llm import get_provider
 from .models import Decision, Record, ReviewState
 from .prisma import compute_flow
 from .report import write_artifacts
-from .sources import search_source, synthetic_records
+from .sources import (FullText, FullTextRetriever, HttpFullTextRetriever,
+                      search_source, synthetic_records)
 from .stats import cohen_kappa
 
 
 class Orchestrator:
     def __init__(self, seed: dict, *, mock: bool = False, live_sources: Optional[bool] = None,
                  model: str | None = None, max_workers: int | None = None,
+                 fulltext_retriever: Optional[FullTextRetriever] = None,
+                 fetch_fulltext: Optional[bool] = None,
                  logger: Optional[Callable[[str], None]] = None):
         self.seed = seed
         self.mock = mock or not config.have_api_key()
@@ -32,6 +35,18 @@ class Orchestrator:
         self.max_workers = max_workers or config.MAX_WORKERS
         self.provider = get_provider(self.mock, self.model)
         self._log_fn = logger or (lambda m: print(m, file=sys.stderr, flush=True))
+
+        # Full-text retrieval (PRISMA "reports sought / retrieved"). On a host with
+        # open egress this hits PMC/Europe PMC directly; an MCP host can inject an
+        # McpFullTextRetriever. Skipped for offline/mock runs (synthetic corpus).
+        self.fetch_fulltext = self.live_sources if fetch_fulltext is None else fetch_fulltext
+        if fulltext_retriever is not None:
+            self.retriever: Optional[FullTextRetriever] = fulltext_retriever
+        elif self.fetch_fulltext:
+            self.retriever = HttpFullTextRetriever()
+        else:
+            self.retriever = None
+        self._fulltext: dict[str, FullText] = {}
 
     def log(self, msg: str, state: ReviewState | None = None) -> None:
         self._log_fn(msg)
@@ -71,8 +86,15 @@ class Orchestrator:
                  f"{len(state.included_after_screening)} records retained for full text.", state)
         self._checkpoint(out_dir, state)
 
-        # Agent 6 — full-text eligibility
-        self.log("[6/10] FullTextEligibility · assessing full texts …", state)
+        # Agent 6 — full-text retrieval + eligibility
+        if self.retriever is not None:
+            self.log("[6/10] FullTextEligibility · retrieving reports (PMC / Europe PMC) …", state)
+            self._retrieve_fulltexts(state)
+            got = sum(1 for ft in self._fulltext.values() if ft.retrieved)
+            self.log(f"Full text retrieved for {got}/{len(self._fulltext)} reports "
+                     f"(remainder assessed from abstract).", state)
+        else:
+            self.log("[6/10] FullTextEligibility · assessing reports …", state)
         self._eligibility(state)
         self.log(f"{len(state.included_studies)} studies eligible for inclusion.", state)
 
@@ -138,15 +160,42 @@ class Orchestrator:
                     state.included_after_screening.append(uid)
         state.cohen_kappa = cohen_kappa(r1_seq, r2_seq)
 
+    def _retrieve_fulltexts(self, state: ReviewState) -> None:
+        by_uid = {r.uid: r for r in state.unique_records}
+        targets = [by_uid[u] for u in state.included_after_screening if u in by_uid]
+
+        def fetch(rec: Record):
+            try:
+                return rec.uid, self.retriever.retrieve(rec)
+            except Exception:  # noqa: BLE001
+                return rec.uid, FullText(text=rec.abstract, retrieved=False, source="abstract")
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as ex:
+            for uid, ft in ex.map(fetch, targets):
+                self._fulltext[uid] = ft
+
+    def _text_for(self, uid: str, fallback: str = "") -> str:
+        ft = self._fulltext.get(uid)
+        return ft.text if ft and ft.text else fallback
+
     def _eligibility(self, state: ReviewState) -> None:
         fulltext = FullTextEligibility(self.provider, state.protocol)
         by_uid = {r.uid: r for r in state.unique_records}
         targets = [by_uid[u] for u in state.included_after_screening if u in by_uid]
 
+        def assess(rec: Record):
+            decision = fulltext.assess(rec, full_text=self._text_for(rec.uid))
+            ft = self._fulltext.get(rec.uid)
+            if ft is not None:
+                # Record the provenance/quality of the report we assessed.
+                decision.full_text_retrieved = ft.retrieved or bool(ft.text)
+                if ft.source and ft.source != "none":
+                    decision.notes = (decision.notes + f" [source: {ft.source}"
+                                      + (f"/{ft.pmcid}" if ft.pmcid else "") + "]").strip()
+            return decision
+
         with ThreadPoolExecutor(max_workers=self.max_workers) as ex:
-            futures = {ex.submit(fulltext.assess, rec): rec for rec in targets}
-            for fut in as_completed(futures):
-                decision = fut.result()
+            for decision in ex.map(assess, targets):
                 state.eligibility.append(decision)
                 if decision.eligible:
                     state.included_studies.append(decision.uid)
@@ -158,13 +207,15 @@ class Orchestrator:
         targets = [by_uid[u] for u in state.included_studies if u in by_uid]
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as ex:
-            extractions = list(ex.map(lambda rec: extractor.extract(rec), targets))
+            extractions = list(ex.map(
+                lambda rec: extractor.extract(rec, full_text=self._text_for(rec.uid)), targets))
         state.extractions = extractions
         ex_by_uid = {e.uid: e for e in extractions}
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as ex:
             robs = list(ex.map(
-                lambda rec: appraiser.assess(rec, ex_by_uid[rec.uid]), targets))
+                lambda rec: appraiser.assess(rec, ex_by_uid[rec.uid],
+                                             full_text=self._text_for(rec.uid)), targets))
         state.rob = robs
 
     def _checkpoint(self, out_dir: Path, state: ReviewState) -> None:
