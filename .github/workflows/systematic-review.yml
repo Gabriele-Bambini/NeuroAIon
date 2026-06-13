@@ -1,0 +1,82 @@
+name: Systematic Review
+
+# Runs the full NeuroAIon pipeline and compiles the LaTeX paper to PDF.
+# - On manual dispatch: produce a review (mock by default; real if a key is set).
+# - On push/PR: run the test suite.
+
+on:
+  workflow_dispatch:
+    inputs:
+      protocol:
+        description: "Path to the YAML protocol file"
+        required: true
+        default: "config/protocol.example.yaml"
+      mock:
+        description: "Force offline mock run (no API key needed)"
+        type: boolean
+        default: true
+      live_sources:
+        description: "Query real literature APIs (PubMed/Europe PMC/...)"
+        type: boolean
+        default: false
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: Run test suite
+        run: python -m pytest -q
+
+  review:
+    # Only generate a paper on manual dispatch.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run the systematic review (produces report.md + paper.tex)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ARGS="--protocol ${{ inputs.protocol }} --no-pdf"
+          [ "${{ inputs.mock }}" = "true" ] && ARGS="$ARGS --mock"
+          [ "${{ inputs.live_sources }}" = "true" ] && ARGS="$ARGS --live-sources"
+          python scripts/run_review.py $ARGS
+          echo "RUN_DIR=$(ls -dt runs/*/ | head -1)" >> "$GITHUB_ENV"
+
+      - name: Compile the LaTeX paper to PDF
+        uses: xu-cheng/latex-action@v3
+        with:
+          working_directory: ${{ env.RUN_DIR }}
+          root_file: paper.tex
+          latexmk_use_xelatex: false
+
+      - name: Upload review artifacts (PDF, report, data)
+        uses: actions/upload-artifact@v4
+        with:
+          name: systematic-review
+          path: |
+            ${{ env.RUN_DIR }}/paper.pdf
+            ${{ env.RUN_DIR }}/paper.tex
+            ${{ env.RUN_DIR }}/report.md
+            ${{ env.RUN_DIR }}/state.json
+            ${{ env.RUN_DIR }}/included_studies.csv
+          if-no-files-found: error

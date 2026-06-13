@@ -28,6 +28,10 @@ def main(argv: list[str] | None = None) -> int:
                      help="Query real literature APIs even in mock mode.")
     run.add_argument("--no-fulltext", action="store_true",
                      help="Skip full-text retrieval (assess from abstracts only).")
+    run.add_argument("--no-latex", action="store_true",
+                     help="Skip LaTeX paper generation.")
+    run.add_argument("--no-pdf", action="store_true",
+                     help="Generate paper.tex but do not attempt local PDF compilation.")
 
     sub.add_parser("agents", help="List the ten agents and their PRISMA responsibilities.")
 
@@ -47,6 +51,7 @@ def main(argv: list[str] | None = None) -> int:
         orch = Orchestrator(
             seed, mock=args.mock, live_sources=live,
             model=args.model, max_workers=args.workers, fetch_fulltext=fetch_ft,
+            make_latex=not args.no_latex, compile_pdf=not args.no_pdf,
         )
         if orch.mock:
             print("ℹ  Running in MOCK mode (no ANTHROPIC_API_KEY). "

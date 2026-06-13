@@ -15,7 +15,8 @@ from .agents import (DataExtractor, DeduplicationAgent, DualScreenAdjudicator,
 from .llm import get_provider
 from .models import Decision, Record, ReviewState
 from .prisma import compute_flow
-from .report import write_artifacts
+from .report import compile_pdf as _compile_pdf
+from .report import write_artifacts, write_latex
 from .sources import (FullText, FullTextRetriever, HttpFullTextRetriever,
                       search_source, synthetic_records)
 from .stats import cohen_kappa
@@ -26,6 +27,7 @@ class Orchestrator:
                  model: str | None = None, max_workers: int | None = None,
                  fulltext_retriever: Optional[FullTextRetriever] = None,
                  fetch_fulltext: Optional[bool] = None,
+                 make_latex: bool = True, compile_pdf: bool = True,
                  logger: Optional[Callable[[str], None]] = None):
         self.seed = seed
         self.mock = mock or not config.have_api_key()
@@ -47,6 +49,10 @@ class Orchestrator:
         else:
             self.retriever = None
         self._fulltext: dict[str, FullText] = {}
+
+        # LaTeX paper generation + optional local PDF compilation.
+        self.make_latex = make_latex
+        self.want_pdf = compile_pdf
 
     def log(self, msg: str, state: ReviewState | None = None) -> None:
         self._log_fn(msg)
@@ -117,6 +123,19 @@ class Orchestrator:
         self.log("[10/10] PRISMAReporter · writing manuscript, flow diagram & checklist …", state)
         prose = PRISMAReporter(self.provider, protocol).write_prose(state)
         report_path = write_artifacts(out_dir, state, prose)
+
+        if self.make_latex:
+            tex_path = write_latex(out_dir, state, prose)
+            self.log(f"LaTeX paper written: {tex_path}", state)
+            if self.want_pdf:
+                pdf = _compile_pdf(tex_path)
+                if pdf:
+                    self.log(f"✓ Compiled PDF: {pdf}", state)
+                else:
+                    self.log("PDF not compiled locally (no TeX engine); "
+                             "compile paper.tex with `latexmk -pdf` or use the CI workflow.",
+                             state)
+
         self.log(f"✓ Review complete. Report: {report_path}", state)
         # Final checkpoint with the populated log.
         (out_dir / "state.json").write_text(state.model_dump_json(indent=2), encoding="utf-8")

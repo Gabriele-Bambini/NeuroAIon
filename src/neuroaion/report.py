@@ -6,6 +6,7 @@ import io
 import json
 from pathlib import Path
 
+from . import latex as _latex
 from .agents.reporter import PRISMAReporter
 from .models import ReviewState
 from .prisma import checklist_markdown, mermaid_flow
@@ -219,3 +220,37 @@ def write_artifacts(out_dir: Path, state: ReviewState, prose: dict[str, str]) ->
     (out_dir / "included_studies.csv").write_text(buf.getvalue(), encoding="utf-8")
 
     return report_path
+
+
+def write_latex(out_dir: Path, state: ReviewState, prose: dict[str, str]) -> Path:
+    """Write the self-contained LaTeX paper and its bibliography. Returns the .tex path."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    tex, bib = _latex.build_document(state, prose)
+    tex_path = out_dir / "paper.tex"
+    tex_path.write_text(tex, encoding="utf-8")
+    (out_dir / "references.bib").write_text(bib, encoding="utf-8")
+    return tex_path
+
+
+def compile_pdf(tex_path: Path) -> Path | None:
+    """Best-effort PDF compilation if a TeX engine is available; else None."""
+    import shutil
+    import subprocess
+
+    engine = shutil.which("latexmk") or shutil.which("pdflatex")
+    if not engine:
+        return None
+    cwd = tex_path.parent
+    try:
+        if engine.endswith("latexmk"):
+            cmd = [engine, "-pdf", "-interaction=nonstopmode", "-halt-on-error", tex_path.name]
+            subprocess.run(cmd, cwd=cwd, capture_output=True, timeout=300)
+        else:
+            for _ in range(3):  # pdflatex + bibtex + pdflatex + pdflatex
+                subprocess.run([engine, "-interaction=nonstopmode", "-halt-on-error",
+                                tex_path.name], cwd=cwd, capture_output=True, timeout=300)
+                subprocess.run(["bibtex", tex_path.stem], cwd=cwd, capture_output=True, timeout=120)
+    except Exception:  # noqa: BLE001
+        return None
+    pdf = tex_path.with_suffix(".pdf")
+    return pdf if pdf.exists() else None

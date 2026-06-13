@@ -1,8 +1,9 @@
 # NeuroAIon — full-auto PRISMA 2020 systematic-review engine
 
 > Stanzia 10 agenti Claude e produce una *systematic review* completa, conforme a
-> **PRISMA 2020**, in modalità **full-auto**: dalla domanda di ricerca al
-> manoscritto con diagramma di flusso, checklist a 27 voci e meta-analisi.
+> **PRISMA 2020**, in modalità **full-auto**: dalla domanda PICO al **paper LaTeX
+> redatto** (PDF) con formule, figure (diagramma di flusso + forest plot),
+> tabelle, checklist a 27 voci, meta-analisi e bibliografia.
 
 A conductor orchestrates **ten specialised agents** (Claude Opus 4.8) through the
 entire systematic-review workflow. Every deterministic computation —
@@ -53,11 +54,34 @@ Outputs land in `runs/<timestamp>/`:
 
 | File | Contents |
 |------|----------|
-| `report.md` | The manuscript: abstract, methods, **Mermaid PRISMA flow diagram**, characteristics / risk-of-bias / forest tables, GRADE, **27-item checklist**, references |
+| **`paper.tex`** | **Publication-grade LaTeX paper** — self-contained, `latexmk -pdf`-ready: title/abstract, methods with typeset estimator **equations**, **TikZ PRISMA flow diagram** + **TikZ forest plot** (vector figures), booktabs tables, GRADE, 27-item checklist, embedded BibTeX |
+| **`paper.pdf`** | The compiled PDF (when a TeX engine is available, or via the GitHub Action) |
+| `references.bib` | BibTeX bibliography of included studies |
+| `report.md` | The same review as Markdown (Mermaid flow diagram, GitHub-renderable) |
 | `state.json` | Complete, resumable run state (every decision, every score) |
 | `prisma_flow.json` | PRISMA flow counts |
 | `extractions.json` | Structured data-extraction records |
 | `included_studies.csv` | Final included set with citations + DOIs |
+
+### Compile the PDF
+
+```bash
+cd runs/<timestamp> && latexmk -pdf paper.tex     # → paper.pdf
+```
+
+The engine compiles automatically if `latexmk`/`pdflatex` is on your PATH. The
+figures are **pure TikZ** (no external images), so the document compiles anywhere
+TeX + TikZ are installed — no missing-figure failures.
+
+## Run it on GitHub (zero local setup)
+
+The repo ships a GitHub Action (`.github/workflows/systematic-review.yml`):
+
+- **Push / PR** → runs the test suite.
+- **Actions → Systematic Review → Run workflow** → runs the full pipeline,
+  **compiles the PDF**, and uploads `paper.pdf` + `report.md` + data as artifacts.
+  Pick the protocol path, toggle mock/live. For a real (model-authored) review,
+  add an `ANTHROPIC_API_KEY` repository secret and untick "mock".
 
 ## Writing your protocol
 
@@ -163,7 +187,6 @@ PRISMA-flow consistency, and an end-to-end offline pipeline smoke + determinism 
 
 - PROSPERO protocol registration export.
 - Funnel-plot / Egger's test for small-study effects (PRISMA 14).
-- Optional `matplotlib` forest-plot rendering (`pip install neuroaion[viz]`).
 
 ## Disclaimer
 
