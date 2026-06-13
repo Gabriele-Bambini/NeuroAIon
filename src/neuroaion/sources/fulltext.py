@@ -139,19 +139,24 @@ class McpFullTextRetriever:
     callables, so the engine works in restricted-egress environments where only
     the sanctioned MCP channel can reach the internet.
 
+    The adapter normalises the real MCP return shapes, so you can pass the tool
+    results through verbatim:
+      • ``convert_ids`` may return a ``list[dict]`` or the PMC ``convert_article_ids``
+        response ``{"records": [{"pmcid": ...}]}`` (or its JSON string).
+      • ``get_full_text`` may return body text, or the ``get_full_text_article``
+        response ``{"articles": [{"full_text": ...}]}`` (or its JSON string).
+
     Parameters
     ----------
     convert_ids:
-        ``convert_ids(ids: list[str], id_type: str) -> list[dict]`` — each dict
-        should expose a ``"pmcid"`` key when full text is available (mirrors the
-        PMC MCP ``convert_article_ids`` tool).
+        ``convert_ids(ids: list[str], id_type: str) -> records`` — mirrors the
+        PMC MCP ``convert_article_ids`` tool.
     get_full_text:
-        ``get_full_text(pmc_ids: list[str]) -> str`` — returns the article body
-        for the given PMC IDs (mirrors ``get_full_text_article``).
+        ``get_full_text(pmc_ids: list[str]) -> body`` — mirrors ``get_full_text_article``.
     """
 
-    def __init__(self, *, convert_ids: Callable[[list[str], str], list[dict]],
-                 get_full_text: Callable[[list[str]], str],
+    def __init__(self, *, convert_ids: Callable[[list[str], str], object],
+                 get_full_text: Callable[[list[str]], object],
                  max_chars: int = 40000):
         self._convert = convert_ids
         self._full = get_full_text
@@ -167,15 +172,12 @@ class McpFullTextRetriever:
         pmcid = ""
         if ident:
             try:
-                for rec in self._convert([ident], idtype) or []:
-                    if rec.get("pmcid"):
-                        pmcid = rec["pmcid"]
-                        break
+                pmcid = _first_pmcid(self._convert([ident], idtype))
             except Exception:  # noqa: BLE001
                 pmcid = ""
         if pmcid:
             try:
-                body = (self._full([pmcid]) or "").strip()
+                body = _mcp_body_text(self._full([pmcid]))
                 if body:
                     return FullText(text=body[:self.max_chars], retrieved=True,
                                     source="pmc", pmcid=pmcid)
@@ -184,3 +186,38 @@ class McpFullTextRetriever:
         if record.abstract:
             return FullText(text=record.abstract, retrieved=False, source="abstract")
         return FullText(text="", retrieved=False, source="none")
+
+
+def _as_dict(result: object) -> object:
+    """Accept a JSON string, a dict, or an SDK object and return a dict/list."""
+    import json as _json
+    if isinstance(result, str):
+        try:
+            return _json.loads(result)
+        except ValueError:
+            return result
+    return result
+
+
+def _first_pmcid(result: object) -> str:
+    data = _as_dict(result)
+    records = data.get("records", data) if isinstance(data, dict) else data
+    if isinstance(records, list):
+        for rec in records:
+            if isinstance(rec, dict) and rec.get("pmcid"):
+                return rec["pmcid"]
+    return ""
+
+
+def _mcp_body_text(result: object) -> str:
+    data = _as_dict(result)
+    if isinstance(data, str):
+        return data.strip()
+    if isinstance(data, dict):
+        arts = data.get("articles")
+        if isinstance(arts, list) and arts:
+            parts = [a.get("full_text") or a.get("text") or ""
+                     for a in arts if isinstance(a, dict)]
+            return "\n\n".join(p for p in parts if p).strip()
+        return (data.get("full_text") or data.get("text") or "").strip()
+    return ""
