@@ -25,6 +25,29 @@ def test_prospero_registration_export():
     assert "Egger's test" in md  # synthesis strategy documented
 
 
+def test_html_report_self_contained():
+    from neuroaion.html_report import build_html
+    from neuroaion.models import (PrismaFlow, ReviewProtocol, ReviewState,
+                                  Synthesis)
+    st = ReviewState(run_id="t", mock=True, model="demo",
+                     protocol=ReviewProtocol(title="T", question="Q?"),
+                     synthesis=Synthesis(narrative="n", grade_certainty="low",
+                                         meta_analysis=MetaAnalysisResult(
+                                             measure="SMD", model="random", k_studies=2,
+                                             pooled_estimate=0.3, ci_lower=0.1, ci_upper=0.5,
+                                             funnel=[{"estimate": 0.3, "se": 0.1}],
+                                             forest=[{"study": "A", "estimate": 0.3,
+                                                      "ci_lower": 0.0, "ci_upper": 0.6,
+                                                      "weight_pct": 100.0}])),
+                     prisma=PrismaFlow(records_total=10, records_screened=8,
+                                       studies_included=2))
+    html = build_html(st, {"abstract": "A & B <test>"})
+    assert html.startswith("<!doctype html>")
+    assert "<svg" in html                      # inline figures, no external deps
+    assert "Studies included" in html
+    assert "&amp;" in html and "&lt;test&gt;" in html  # user text escaped
+
+
 def test_funnel_tikz_renders_and_degrades():
     from neuroaion.latex import funnel_tikz
     meta = MetaAnalysisResult(measure="SMD", model="random", k_studies=3,

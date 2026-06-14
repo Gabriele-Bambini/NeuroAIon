@@ -216,6 +216,11 @@ def write_artifacts(out_dir: Path, state: ReviewState, prose: dict[str, str]) ->
     report_path = out_dir / "report.md"
     report_path.write_text(build_markdown(state, prose), encoding="utf-8")
 
+    # Browser-friendly self-contained HTML (inline SVG figures).
+    from . import html_report
+    (out_dir / "review.html").write_text(
+        html_report.build_html(state, prose), encoding="utf-8")
+
     (out_dir / "state.json").write_text(state.model_dump_json(indent=2), encoding="utf-8")
     (out_dir / "prisma_flow.json").write_text(
         state.prisma.model_dump_json(indent=2), encoding="utf-8")
