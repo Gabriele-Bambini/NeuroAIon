@@ -1,20 +1,32 @@
-# Demo review — output sample (ILLUSTRATIVE DATA)
+# Demo review — full dossier (ILLUSTRATIVE DATA)
 
-This folder is a **sample of NeuroAIon's real engine output**. The study data are
-**illustrative** (authored for demonstration, not a real evidence synthesis) — the
-report header is marked accordingly. The **statistics and rendering are real**:
-meta-analysis, Egger's test, Cohen's κ, PRISMA flow counts, TikZ figures, and the
-LaTeX/PROSPERO documents are all produced by the engine.
+A sample of NeuroAIon's complete output. Study data are **illustrative**
+(authored for demonstration, not a real evidence synthesis — the report header
+says so). The statistics, documents, audit trail and integrity manifest are the
+engine's real output.
 
-| File | What it is |
-|------|-----------|
-| `report.md` | Full Markdown manuscript (Mermaid PRISMA flow diagram renders on GitHub) |
-| `paper.tex` | Self-contained LaTeX paper (`latexmk -pdf paper.tex` → PDF) with TikZ forest + funnel plots and typeset equations |
-| `prospero_registration.md` | Ready-to-submit PROSPERO registration form |
-| `included_studies.csv` | Final included set |
-| `extractions.json` / `prisma_flow.json` / `references.bib` | Structured data + bibliography |
+## Manuscript & figures
+- `report.md` — Markdown manuscript (Mermaid PRISMA flow renders on GitHub)
+- `paper.pdf` — journal-grade two-column PDF (vector PRISMA / forest / funnel / RoB traffic-light)
+- `paper.tex` — self-contained LaTeX (`latexmk -pdf`); `review.html` — browser version
 
-Pooled SMD 0.28 [0.12, 0.44], I²=0%, Egger p=0.44, κ=0.69, 5 studies included (from 10 records).
+## Formal documents (`documents/`)
+| File | Document |
+|------|----------|
+| `01_protocol.md` | Review protocol (PICO, criteria, plan) |
+| `02_search_log.md/.csv` | Per-database queries + hits |
+| `03_screening_log.csv` | Per-record dual-reviewer decisions + adjudication |
+| `04_excluded_full_text.md/.csv` | Excluded full texts with reasons (PRISMA 16b) |
+| `05_data_extraction_form.csv` | Structured extraction table |
+| `06_risk_of_bias.md` | Per-study RoB2 with domain rationales |
+| `07_summary_of_findings.md` | GRADE Summary-of-Findings table |
+| `08_prisma_checklist.md` | PRISMA 2020 27-item checklist |
+| `prospero_registration.md` | Ready-to-submit PROSPERO form |
 
-To reproduce with **real** PubMed/PMC studies, run the pipeline with the literature
-MCP servers approved, or headless with an API key.
+## Auditable process evidence
+- `audit_trail.jsonl` / `audit_log.csv` — every screening / eligibility / extraction / RoB decision, with actor and rationale
+- `audit_report.md` — human-readable process summary
+- `manifest.json` — provenance (engine, model, parameters, software versions) + **SHA-256 checksum of every artefact** (integrity)
+- `*_bundle.zip` — the entire dossier in one portable file
+
+Reproduce: `python examples/make_demo.py` (illustrative) — or run the pipeline on real PubMed/PMC data with the literature MCP servers approved / an API key.

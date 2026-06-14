@@ -96,6 +96,30 @@ The engine compiles automatically if `latexmk`/`pdflatex` is on your PATH. The
 figures are **pure TikZ** (no external images), so the document compiles anywhere
 TeX + TikZ are installed — no missing-figure failures.
 
+## Full dossier & audit trail (process evidence)
+
+Beyond the manuscript, every run compiles the formal documents a rigorous review
+must hand over, plus auditable evidence of *how* it was produced — written into
+`documents/` and the run root:
+
+**Documents** (`documents/`): review protocol · search log (queries + hits) ·
+screening log (per-record, both reviewers + adjudication) · excluded full texts
+with reasons (PRISMA 16b) · data-extraction form · per-study **risk-of-bias**
+report · **GRADE Summary of Findings** · PRISMA 2020 checklist · PROSPERO form.
+
+**Auditable process evidence**:
+
+| Artefact | What it proves |
+|----------|----------------|
+| `audit_trail.jsonl` / `audit_log.csv` | Every screening / eligibility / extraction / RoB **decision**, with actor and rationale |
+| `audit_report.md` | Human-readable process summary (κ, counts, exclusion reasons) |
+| `manifest.json` | Provenance (engine, model, parameters, software versions) + **SHA-256 checksum of every artefact** for integrity verification |
+| `<run>_bundle.zip` | The entire dossier in one portable file |
+
+The manifest lets a third party verify every output is unmodified; the audit log
+lets them reconstruct every decision. A worked sample lives in
+[`examples/demo_review/`](examples/demo_review).
+
 ## Run it on GitHub (zero local setup)
 
 The repo ships a GitHub Action (`.github/workflows/systematic-review.yml`):

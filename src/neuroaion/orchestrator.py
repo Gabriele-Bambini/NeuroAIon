@@ -175,6 +175,12 @@ class Orchestrator:
         # Final checkpoint with the populated log.
         (out_dir / "state.json").write_text(state.model_dump_json(indent=2), encoding="utf-8")
 
+        # Provenance + integrity manifest (SHA-256 of every artefact) — written
+        # last so it hashes the full dossier, then the bundle.
+        from . import audit
+        manifest = audit.write_manifest(out_dir, state)
+        self.log(f"🔏 Provenance manifest (sha256): {manifest}", state)
+
         # Local-save: portable zip bundle of every artefact.
         if self.make_bundle:
             from .report import bundle_run, save_locally

@@ -1,0 +1,33 @@
+seq,phase,actor,uid,title,decision,confidence,reason
+1,screening,reviewer_1,doi:10.9999/demo.001,Anodal tDCS improves n-back accuracy over left DLPFC,include,0.5,on-topic
+2,screening,reviewer_2,doi:10.9999/demo.001,Anodal tDCS improves n-back accuracy over left DLPFC,include,0.5,
+3,screening,reviewer_1,doi:10.9999/demo.002,Single-session tDCS and working memory: a crossover RCT,include,0.5,on-topic
+4,screening,reviewer_2,doi:10.9999/demo.002,Single-session tDCS and working memory: a crossover RCT,include,0.5,
+5,screening,reviewer_1,doi:10.9999/demo.003,Prefrontal tDCS enhances 2-back performance,include,0.5,on-topic
+6,screening,reviewer_2,doi:10.9999/demo.003,Prefrontal tDCS enhances 2-back performance,include,0.5,
+7,screening,reviewer_1,doi:10.9999/demo.004,No reliable effect of tDCS on spatial working memory,include,0.5,on-topic
+8,screening,reviewer_2,doi:10.9999/demo.004,No reliable effect of tDCS on spatial working memory,include,0.5,
+9,screening,reviewer_1,doi:10.9999/demo.005,tDCS over DLPFC and executive working memory,include,0.5,on-topic
+10,screening,reviewer_2,doi:10.9999/demo.005,tDCS over DLPFC and executive working memory,include,0.5,
+11,screening,reviewer_1,doi:10.9999/demo.006,Anodal tDCS effects on verbal n-back: a sham-controlled trial,include,0.5,on-topic
+12,screening,reviewer_2,doi:10.9999/demo.006,Anodal tDCS effects on verbal n-back: a sham-controlled trial,include,0.5,
+13,screening,reviewer_1,doi:10.9999/demo.007,tACS and memory (off-topic intervention),exclude,0.5,wrong intervention/population
+14,screening,reviewer_2,doi:10.9999/demo.007,tACS and memory (off-topic intervention),exclude,0.5,
+15,screening,reviewer_1,doi:10.9999/demo.008,tDCS in stroke patients (clinical population),exclude,0.5,wrong intervention/population
+16,screening,reviewer_2,doi:10.9999/demo.008,tDCS in stroke patients (clinical population),maybe,0.5,
+17,eligibility,EligibilityAdjudicator,doi:10.9999/demo.001,Anodal tDCS improves n-back accuracy over left DLPFC,eligible,,
+18,eligibility,EligibilityAdjudicator,doi:10.9999/demo.002,Single-session tDCS and working memory: a crossover RCT,eligible,,
+19,eligibility,EligibilityAdjudicator,doi:10.9999/demo.003,Prefrontal tDCS enhances 2-back performance,eligible,,
+20,eligibility,EligibilityAdjudicator,doi:10.9999/demo.004,No reliable effect of tDCS on spatial working memory,eligible,,
+21,eligibility,EligibilityAdjudicator,doi:10.9999/demo.005,tDCS over DLPFC and executive working memory,eligible,,
+22,eligibility,EligibilityAdjudicator,doi:10.9999/demo.006,Anodal tDCS effects on verbal n-back: a sham-controlled trial,excluded,,No valid sham comparator
+23,extraction,DataExtractor,doi:10.9999/demo.001,Author1 A 2013,extracted,,n=52; effects=1
+24,extraction,DataExtractor,doi:10.9999/demo.002,Author2 A 2015,extracted,,n=64; effects=1
+25,extraction,DataExtractor,doi:10.9999/demo.003,Author3 A 2012,extracted,,n=28; effects=1
+26,extraction,DataExtractor,doi:10.9999/demo.004,Author4 A 2018,extracted,,n=40; effects=1
+27,extraction,DataExtractor,doi:10.9999/demo.005,Author5 A 2016,extracted,,n=46; effects=1
+28,risk_of_bias,RiskOfBiasAssessor,doi:10.9999/demo.001,Author1 A 2013,some concerns,,Blinding of outcome assessment unclear.
+29,risk_of_bias,RiskOfBiasAssessor,doi:10.9999/demo.002,Author2 A 2015,some concerns,,Blinding of outcome assessment unclear.
+30,risk_of_bias,RiskOfBiasAssessor,doi:10.9999/demo.003,Author3 A 2012,some concerns,,Blinding of outcome assessment unclear.
+31,risk_of_bias,RiskOfBiasAssessor,doi:10.9999/demo.004,Author4 A 2018,some concerns,,Blinding of outcome assessment unclear.
+32,risk_of_bias,RiskOfBiasAssessor,doi:10.9999/demo.005,Author5 A 2016,some concerns,,Blinding of outcome assessment unclear.

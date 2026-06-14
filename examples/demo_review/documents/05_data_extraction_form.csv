@@ -1,0 +1,6 @@
+study,design,n,population,intervention,comparator,outcomes,measure,estimate,ci_lower,ci_upper,se,funding
+Author1 A 2013,randomized crossover,52,Healthy adults,Anodal tDCS L-DLPFC,Sham,n-back accuracy,SMD,0.42,,,0.18,
+Author2 A 2015,randomized crossover,64,Healthy adults,Anodal tDCS L-DLPFC,Sham,n-back accuracy,SMD,0.18,,,0.15,
+Author3 A 2012,randomized crossover,28,Healthy adults,Anodal tDCS L-DLPFC,Sham,n-back accuracy,SMD,0.55,,,0.25,
+Author4 A 2018,randomized crossover,40,Healthy adults,Anodal tDCS L-DLPFC,Sham,n-back accuracy,SMD,0.05,,,0.2,
+Author5 A 2016,randomized crossover,46,Healthy adults,Anodal tDCS L-DLPFC,Sham,n-back accuracy,SMD,0.31,,,0.17,

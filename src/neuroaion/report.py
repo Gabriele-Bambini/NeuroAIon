@@ -251,6 +251,12 @@ def write_artifacts(out_dir: Path, state: ReviewState, prose: dict[str, str]) ->
         (out_dir / "prospero_registration.md").write_text(
             prospero.build_registration(state), encoding="utf-8")
 
+    # Formal document dossier (protocol, search/screening logs, excluded full
+    # texts, extraction form, RoB report, GRADE SoF, checklist) + audit trail.
+    from . import audit, documents
+    documents.write_documents(out_dir, state)
+    audit.write_audit(out_dir, state)
+
     return report_path
 
 
@@ -271,9 +277,9 @@ def bundle_run(out_dir: Path) -> Path:
     out_dir = Path(out_dir)
     zip_path = out_dir / f"{out_dir.name}_bundle.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
-        for f in sorted(out_dir.iterdir()):
+        for f in sorted(out_dir.rglob("*")):       # recursive: includes documents/
             if f.is_file() and f.name != zip_path.name:
-                z.write(f, f.name)
+                z.write(f, str(f.relative_to(out_dir)))
     return zip_path
 
 

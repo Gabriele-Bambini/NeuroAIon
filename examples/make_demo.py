@@ -149,8 +149,10 @@ PROSE = {
 def main():
     st = build()
     out = Path(__file__).resolve().parents[1] / "runs" / "demo"
+    from neuroaion import audit
     R.write_artifacts(out, st, PROSE)
     R.write_latex(out, st, PROSE)
+    audit.write_manifest(out, st)
     R.bundle_run(out)
     m = st.synthesis.meta_analysis
     print(f"Pooled {m.measure}={m.pooled_estimate} [{m.ci_lower}, {m.ci_upper}] "

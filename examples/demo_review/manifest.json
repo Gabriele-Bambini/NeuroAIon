@@ -1,0 +1,75 @@
+{
+  "engine": "NeuroAIon",
+  "version": "0.1.0",
+  "run_id": "demo",
+  "created_at": "2026-06-14T12:48:27.472683",
+  "generated_at": "2026-06-14T12:48:27.633156Z",
+  "model": "cowork (Claude, illustrative data)",
+  "mock": true,
+  "title": "Anodal tDCS over the left DLPFC and working memory in healthy adults (PIPELINE DEMONSTRATION — illustrative data)",
+  "question": "In healthy adults, does anodal tDCS over the left DLPFC, versus sham, improve working-memory performance on n-back tasks?",
+  "parameters": {
+    "sources": [
+      "pubmed",
+      "europepmc",
+      "crossref",
+      "openalex"
+    ],
+    "date_range": [
+      "2008-01-01",
+      "2024-12-31"
+    ],
+    "effect_measure": "SMD",
+    "model_type": "random",
+    "risk_of_bias_tool": "RoB2"
+  },
+  "counts": {
+    "records_identified": 10,
+    "duplicates_removed": 2,
+    "records_screened": 8,
+    "reports_assessed": 6,
+    "studies_included": 5,
+    "cohen_kappa": 0.692
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.5-x86_64-with-glibc2.39",
+    "packages": {
+      "pydantic": "2.13.4",
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "rapidfuzz": "3.14.5",
+      "reportlab": "4.5.1",
+      "requests": "2.33.1",
+      "PyYAML": "6.0.1"
+    }
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "files": {
+      "audit_log.csv": "e10b826d219d073c7901d2127f978f1b6846d7ffdf5f9fa389dfb3fc0d8a752c",
+      "audit_report.md": "de0ced4acd71a3b9959a548275237d1d3d20d7316f3df3df2ab0baa63bf769c2",
+      "audit_trail.jsonl": "065a807e5343214163491d08d737db79d41bafd1f69f3798da92512b36f7152d",
+      "documents/01_protocol.md": "12b54068d5ad910625bfc2b5274ca07d05a2de9d5bec00acae637d18e2c7d540",
+      "documents/02_search_log.csv": "6874fa5b557a939ba21f540b21ceacacf565baf30a29dc74bed1815204178b9b",
+      "documents/02_search_log.md": "17f6b5906f2b27ebcc3668ccb232e40946740cce42f178ff1b4757562f5966a4",
+      "documents/03_screening_log.csv": "f6a8e22725791156e6d992d56c9e88dcf6f9629cff24e02bffc121dd85b25c69",
+      "documents/04_excluded_full_text.csv": "65e48814c3096ce8ef587f82d118f126958212795a0b879b46d1b0af53e9cede",
+      "documents/04_excluded_full_text.md": "b6f6828c85352270e5681e7f7eaffa3ddc72f45e5ca9e9ee3e83dba6a9f57043",
+      "documents/05_data_extraction_form.csv": "b316de93d3bb93e3d2a399ebd874dc87905a8614be140a72b1bde1b42ee02129",
+      "documents/06_risk_of_bias.md": "07242ddfd54cde32d75064781711dedf6c1a2b55436c740e968c7f7e25a9fce6",
+      "documents/07_summary_of_findings.md": "57ed809c30215fa95cc8f185a121c68b5531e1d9a4e435b9829603bd1d52f7db",
+      "documents/08_prisma_checklist.md": "0a87dae19cfa89d6ca73042423cb39ae574de64d6f4b04e90e85df2d26a68954",
+      "extractions.json": "fd6d785c91f31c93fa61f9b1fb10b78a3a696e66f92025a089c2a9c4c36ee29a",
+      "included_studies.csv": "7dc0e1c836d1f0b072815275a32cd171fbed9049b7fdc45012f0e9d9844a944d",
+      "paper.pdf": "aaed87f8a84e54d1114f4e33a7732ab6f845224fc0dfff1e9467c355ac619292",
+      "paper.tex": "66e39165c22e426db82dbc8fdfac363d4257c12189e399ea663dae7f64bc6b21",
+      "prisma_flow.json": "23099d95b6e3becef95e39f54524a96ce857c11dc92cbc5798c9c8fd5963fc9d",
+      "prospero_registration.md": "179b8ed92e44c8c6d72ff6001f35b10f908403623eb8f947478356e2efc7c58b",
+      "references.bib": "3edc638bce9ff5649b17036cbc97933b903eb972de9ae031bd0ac298a1947ad8",
+      "report.md": "8dcfaff8019c5dfa9e51ce503967ad35c0af8b5c64ed8bcb27e5ac4981972631",
+      "review.html": "ffb1710ee8043872beed5c379b61569e920fa3a8005f98afd08b1426e4c15497",
+      "state.json": "612a1c8d2b48afe24853f9997b774ebb2e06d30dd7a0942eaeb1eb1e6286c7b9"
+    }
+  }
+}

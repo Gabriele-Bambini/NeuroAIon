@@ -1,0 +1,9 @@
+uid,doi,title,reviewer_1,reviewer_2,adjudicator,final,reason
+doi:10.9999/demo.001,10.9999/demo.001,Anodal tDCS improves n-back accuracy over left DLPFC,include,include,,included,on-topic
+doi:10.9999/demo.002,10.9999/demo.002,Single-session tDCS and working memory: a crossover RCT,include,include,,included,on-topic
+doi:10.9999/demo.003,10.9999/demo.003,Prefrontal tDCS enhances 2-back performance,include,include,,included,on-topic
+doi:10.9999/demo.004,10.9999/demo.004,No reliable effect of tDCS on spatial working memory,include,include,,included,on-topic
+doi:10.9999/demo.005,10.9999/demo.005,tDCS over DLPFC and executive working memory,include,include,,included,on-topic
+doi:10.9999/demo.006,10.9999/demo.006,Anodal tDCS effects on verbal n-back: a sham-controlled trial,include,include,,included,on-topic
+doi:10.9999/demo.007,10.9999/demo.007,tACS and memory (off-topic intervention),exclude,exclude,,excluded,wrong intervention/population
+doi:10.9999/demo.008,10.9999/demo.008,tDCS in stroke patients (clinical population),exclude,maybe,,excluded,wrong intervention/population
