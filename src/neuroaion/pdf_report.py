@@ -60,6 +60,14 @@ def _para(text, style):
     return Paragraph(text if "<" in (text or "") else html.escape(text or ""), style)
 
 
+def _rich(markup, style):
+    """A Paragraph from text that is ALREADY valid mini-XML markup — entities and
+    tags are passed through verbatim (never re-escaped). Dynamic user-supplied
+    substrings inside *markup* must be html.escaped by the caller."""
+    from reportlab.platypus import Paragraph
+    return Paragraph(markup or "", style)
+
+
 def _caption(n, text, S):
     from reportlab.platypus import Paragraph
     return Paragraph(f"<b>Figure {n} |</b> {html.escape(text)}", S["cap"])
@@ -360,7 +368,7 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         f"{p.pico.outcome}. {len(state.included_studies)} studies were included.")
     abs_inner = (_abstract_html(prose)
                  if isinstance(prose.get("abstract"), dict) else html.escape(str(abstract_txt)))
-    abs_box = Table([[_para(f"<b>Abstract</b> &nbsp; {abs_inner}", S["abstract"])]],
+    abs_box = Table([[_rich(f"<b>Abstract</b>&#160;&#160;{abs_inner}", S["abstract"])]],
                     colWidths=[full_w])
     abs_box.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f5f7f8")),
@@ -369,18 +377,19 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
         ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7)]))
 
+    SEP = "&#160;&#160;&#183;&#160;&#160;"   # spaced middot separator
     title_block = [
         _para(p.title, S["title"]),
-        _para("NeuroAIon — automated multi-agent systematic-review engine"
-              + (f" &nbsp;·&nbsp; {html.escape(p.authors_contact)}" if p.authors_contact else ""),
+        _rich("<b>NeuroAIon</b> — automated multi-agent systematic-review engine"
+              + (f"{SEP}{html.escape(p.authors_contact)}" if p.authors_contact else ""),
               S["authors"]),
-        _para(f"PRISMA 2020"
-              + (f" &nbsp;·&nbsp; {html.escape(p.registration)}" if p.registration else "")
-              + (" &nbsp;·&nbsp; <b>DEMONSTRATION (illustrative data)</b>" if state.mock else ""),
+        _rich("<b>PRISMA 2020</b>"
+              + (f"{SEP}{html.escape(p.registration)}" if p.registration else "")
+              + (f"{SEP}<b>DEMONSTRATION (illustrative data)</b>" if state.mock else ""),
               S["affil"]),
         abs_box,
-        _para(f"<b>Keywords</b> &nbsp; {html.escape(_keywords(state))}", S["kw"]),
-        _para(f"<b>Review question</b> &nbsp; {html.escape(p.question)}", S["kw"]),
+        _rich(f"<b>Keywords</b>&#160;&#160;{html.escape(_keywords(state))}", S["kw"]),
+        _rich(f"<b>Review question</b>&#160;&#160;{html.escape(p.question)}", S["kw"]),
         HRFlowable(width="100%", thickness=0.8, color=colors.HexColor(ACCENT),
                    spaceBefore=4, spaceAfter=2),
     ]
@@ -431,10 +440,10 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         num = numbered if numbered is not None else (t in NUMBERED)
         if num:
             secn[0] += 1
-            label = f"{secn[0]}&nbsp;&nbsp;{t.upper()}"
+            label = f"{secn[0]}&#160;&#160;{html.escape(t.upper())}"
         else:
-            label = t.upper()
-        story.append(_para(label, S["h"]))
+            label = html.escape(t.upper())
+        story.append(_rich(label, S["h"]))
         story.append(_HR(width="100%", thickness=0.5, color=_c.HexColor(RULE),
                          spaceBefore=0, spaceAfter=3))
 
@@ -442,7 +451,7 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         # Subsection heading: numbered <main>.<n>, lighter, no rule.
         sub = getattr(H3, "_n", 0) + 1
         H3._n = sub
-        story.append(_para(f"{secn[0]}.{sub}&nbsp;&nbsp;{html.escape(t)}", S["h3"]))
+        story.append(_rich(f"{secn[0]}.{sub}&#160;&#160;{html.escape(t)}", S["h3"]))
 
     def _reset_sub():
         H3._n = 0
@@ -466,7 +475,7 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
     story.append(_para(prose.get("methods", "") or
                        "Conducted and reported per PRISMA 2020.", S["body"]))
     story.append(_para(
-        f"Two reviewers screened in duplicate (Cohen's &#954; = {state.cohen_kappa}); "
+        f"Two reviewers screened in duplicate (Cohen's κ = {state.cohen_kappa}); "
         f"conflicts were adjudicated. Risk of bias was appraised with "
         f"{html.escape(p.risk_of_bias.tool)} and certainty with GRADE. A "
         f"{html.escape(p.synthesis.model)}-effects inverse-variance model pooled "
@@ -519,7 +528,8 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         story.append(_para(
             f"Egger's regression test: intercept = {meta.eggers_intercept}, "
             f"p = {meta.eggers_p}, k = {meta.eggers_k}"
-            + (" (under-powered, k &lt; 10)." if (meta.eggers_k or 0) < 10 else "."), S["body"]))
+            + (" (under-powered: fewer than 10 studies)." if (meta.eggers_k or 0) < 10
+               else "."), S["body"]))
 
     H3("Certainty of evidence (GRADE)")
     story.append(_para(f"<b>{html.escape(s.grade_certainty or 'not rated')}.</b> "
