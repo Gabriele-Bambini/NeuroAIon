@@ -80,3 +80,38 @@ def test_pdf_report_generates(tmp_path):
     data = out.read_bytes()
     assert data[:5] == b"%PDF-"          # a real PDF
     assert len(data) > 1000
+
+
+def test_arxiv_parser_offline(monkeypatch):
+    """The arXiv Atom parser builds Records (verified without network)."""
+    from neuroaion.sources import arxiv
+    feed = """<?xml version="1.0" encoding="UTF-8"?>
+    <feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
+      <entry>
+        <id>http://arxiv.org/abs/2401.01234v1</id>
+        <title>Sheaf Neural Networks for Gene Regulatory Network Inference</title>
+        <summary>We apply sheaf diffusion to GRN inference and benchmark on BEELINE.</summary>
+        <published>2024-01-03T00:00:00Z</published>
+        <author><name>Jane Doe</name></author>
+        <author><name>John Roe</name></author>
+        <arxiv:doi xmlns:arxiv="http://arxiv.org/schemas/atom">10.1234/x</arxiv:doi>
+      </entry>
+    </feed>"""
+
+    class _Resp:
+        text = feed
+
+    monkeypatch.setattr(arxiv, "http_get", lambda *a, **k: _Resp())
+    recs = arxiv.search("sheaf gene regulatory network", retmax=5)
+    assert len(recs) == 1
+    r = recs[0]
+    assert r.source == "arxiv" and "Sheaf Neural Networks" in r.title
+    assert r.authors == ["Jane Doe", "John Roe"] and r.year == 2024
+    assert r.source_id == "2401.01234v1"
+
+
+def test_arxiv_in_default_sources():
+    from neuroaion import frameworks, wizard
+    assert "arxiv" in frameworks.DEFAULT_SOURCES
+    seed = wizard.build_seed(topic="t", framework="PICO")
+    assert "arxiv" in seed["search"]["sources"]

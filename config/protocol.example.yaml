@@ -45,8 +45,10 @@ search:
   # All sources are free / open (no paid keys). Available:
   #   pubmed, europepmc, crossref, openalex, biorxiv,
   #   clinicaltrials, doaj, semanticscholar, arxiv
+  # arxiv + semanticscholar are included by default so CS / methods preprints
+  # (graph-ML, sheaf models, etc.) are covered.
   sources: ["pubmed", "europepmc", "crossref", "openalex", "biorxiv",
-            "clinicaltrials", "doaj", "semanticscholar"]
+            "arxiv", "semanticscholar"]
   date_from: "2010-01-01"
   date_to: "auto"            # 'auto' = today
   languages: ["en"]

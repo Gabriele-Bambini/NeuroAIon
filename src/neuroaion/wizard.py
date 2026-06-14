@@ -67,7 +67,7 @@ def build_seed(
         "inclusion_criteria": inclusion or [],
         "exclusion_criteria": exclusion or [],
         "search": {
-            "sources": sources or ["pubmed", "europepmc", "crossref", "openalex"],
+            "sources": sources or list(frameworks.DEFAULT_SOURCES),
             "date_from": date_from, "date_to": date_to,
             "languages": languages or ["en"], "max_records_per_source": max_per_source,
             "keywords": keywords or [],
@@ -163,7 +163,7 @@ def interactive() -> tuple[dict, str, bool]:
     exclusion = _ask_lines("Exclusion criteria")
 
     sources = _multi("Databases to search", list(SOURCES),
-                     ["pubmed", "europepmc", "crossref", "openalex"])
+                     list(frameworks.DEFAULT_SOURCES))
     date_from = _ask("\nSearch from (YYYY-MM-DD)", "2010-01-01")
     date_to = _ask("Search to (YYYY-MM-DD or 'auto')", "auto")
 

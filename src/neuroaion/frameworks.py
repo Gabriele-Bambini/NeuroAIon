@@ -52,6 +52,11 @@ ROB_TOOLS: dict[str, list[str]] = {
 
 CITATION_STYLES = ["vancouver", "apa", "harvard", "numeric"]
 
+# Default literature sources (all free, no key). arXiv + Semantic Scholar are
+# included so CS / methods preprints (e.g. graph-ML, sheaf models) are covered.
+DEFAULT_SOURCES = ["pubmed", "europepmc", "crossref", "openalex",
+                   "arxiv", "semanticscholar", "biorxiv"]
+
 DEFAULT_DESIGNS = {
     "PICO": ["randomized controlled trial"],
     "PECO": ["cohort", "case-control"],
