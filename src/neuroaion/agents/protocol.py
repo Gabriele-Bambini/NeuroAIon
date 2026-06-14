@@ -1,6 +1,7 @@
 """Agent 1 — ProtocolArchitect (PRISMA items 4–7)."""
 from __future__ import annotations
 
+from ..frameworks import FRAMEWORKS
 from ..models import (PICO, ReviewProtocol, RoBConfig, SearchConfig, SynthesisConfig)
 from .base import Agent, obj
 
@@ -8,6 +9,53 @@ from .base import Agent, obj
 class ProtocolArchitect(Agent):
     name = "ProtocolArchitect"
     role = "Formulate the research question, PICO and eligibility contract."
+
+    def propose_questions(self, topic: str, n: int = 4) -> list[dict]:
+        """From an informal topic, propose several *formal* review questions in
+        different frameworks (PICO/PECO/SPIDER/PCC/…), each with its elements.
+
+        Returns a list of {framework, question, elements, rationale, review_type}.
+        The user picks one to drive the review.
+        """
+        schema = obj({
+            "proposals": {
+                "type": "array",
+                "items": obj({
+                    "framework": {"type": "string"},
+                    "review_type": {"type": "string"},
+                    "question": {"type": "string"},
+                    "elements": {
+                        "type": "array",
+                        "items": obj({"label": {"type": "string"},
+                                      "value": {"type": "string"}}),
+                    },
+                    "rationale": {"type": "string"},
+                }),
+            }
+        })
+        system = (
+            "You are a systematic-review methodologist. Given an informal research "
+            f"topic, propose {n} DISTINCT formal review questions, each using a "
+            "different, appropriate framework from this list: "
+            f"{', '.join(FRAMEWORKS)}. For each, give the framework name, the review "
+            "type (e.g. intervention / methodological-benchmark / scoping / diagnostic), "
+            "a precise one-sentence formal question, the framework elements as "
+            "label/value pairs, and a one-line rationale for why this framing fits."
+        )
+        try:
+            out = self.ask_json(system, f"TOPIC: {topic}", schema, max_tokens=3000)
+            props = []
+            for p in out.get("proposals", []):
+                props.append({
+                    "framework": p.get("framework", "PICO"),
+                    "review_type": p.get("review_type", ""),
+                    "question": p.get("question", ""),
+                    "elements": {e["label"]: e["value"] for e in p.get("elements", [])},
+                    "rationale": p.get("rationale", ""),
+                })
+            return props
+        except Exception:  # noqa: BLE001
+            return []
 
     def build(self, seed: dict) -> ReviewProtocol:
         pico = PICO(**(seed.get("pico") or {}))

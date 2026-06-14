@@ -47,6 +47,7 @@ ROB_TOOLS: dict[str, list[str]] = {
                  "Meta-analysis methods", "Publication bias"],
     "JBI": ["Inclusion criteria", "Exposure measurement", "Confounding",
             "Outcome measurement", "Statistical analysis"],
+    "PROBAST": ["Participants", "Predictors", "Outcome", "Analysis"],  # prediction models
 }
 
 CITATION_STYLES = ["vancouver", "apa", "harvard", "numeric"]

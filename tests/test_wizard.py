@@ -56,3 +56,20 @@ def test_all_frameworks_and_rob_tools_have_elements():
         assert frameworks.framework_elements(fw)
     for tool, domains in frameworks.ROB_TOOLS.items():
         assert len(domains) >= 3
+
+
+def test_propose_questions_returns_structured_list():
+    from neuroaion.agents.protocol import ProtocolArchitect
+    from neuroaion.llm import MockProvider
+    from neuroaion.models import ReviewProtocol
+    arch = ProtocolArchitect(MockProvider(), ReviewProtocol(title="x"))
+    props = arch.propose_questions("GNNs on gene regulatory networks", n=4)
+    assert isinstance(props, list) and props
+    p = props[0]
+    assert {"framework", "question", "elements", "rationale"} <= set(p)
+    assert isinstance(p["elements"], dict)
+
+
+def test_probast_available_for_prediction_models():
+    from neuroaion import frameworks
+    assert "PROBAST" in frameworks.ROB_TOOLS
