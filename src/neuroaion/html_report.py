@@ -108,6 +108,38 @@ def _funnel_svg(meta: Optional[MetaAnalysisResult]) -> str:
     return "".join(s)
 
 
+_ROB_COLOR = {"low": "#2e7d32", "some concerns": "#f9a825", "high": "#c62828"}
+_ROB_SYM = {"low": "+", "some concerns": "–", "high": "×"}
+
+
+def _rob_svg(state: ReviewState) -> str:
+    if not state.rob:
+        return ""
+    domains = [d.name for d in state.rob[0].domains]
+    cols = domains + ["Overall"]
+    cw, rh, labw, headh = 30, 22, 150, 96
+    W = labw + len(cols) * cw + 10
+    H = headh + len(state.rob) * rh + 10
+    s = [f'<svg viewBox="0 0 {W} {H}" width="100%" style="max-width:640px" '
+         f'font-family="sans-serif" font-size="11">']
+    for j, c in enumerate(cols):
+        x = labw + j * cw + cw / 2
+        s.append(f'<text x="{x}" y="{headh-6}" transform="rotate(-55 {x},{headh-6})" '
+                 f'font-size="9">{esc(c[:22])}</text>')
+    for i, a in enumerate(state.rob):
+        y = headh + i * rh + rh / 2
+        s.append(f'<text x="4" y="{y+4}" font-size="9">{esc(a.study_label[:26])}</text>')
+        jud = {d.name: d.judgement for d in a.domains}
+        for j, c in enumerate(cols):
+            v = a.overall if c == "Overall" else jud.get(c, "some concerns")
+            cx = labw + j * cw + cw / 2
+            s.append(f'<circle cx="{cx}" cy="{y}" r="8" fill="{_ROB_COLOR.get(v,"#9e9e9e")}"/>'
+                     f'<text x="{cx}" y="{y+4}" text-anchor="middle" fill="#fff" '
+                     f'font-weight="bold">{_ROB_SYM.get(v,"?")}</text>')
+    s.append("</svg>")
+    return "".join(s)
+
+
 def _prisma_html(flow: PrismaFlow) -> str:
     ident = "<br>".join(f"{esc(k)}: {v}" for k, v in flow.records_identified.items()) or "—"
     excl = sum(flow.reports_excluded.values())
@@ -191,7 +223,9 @@ def build_html(state: ReviewState, prose: dict[str, str]) -> str:
 <p>{meta_line}</p>
 <h3>Characteristics of included studies</h3>
 {_table(["Study","Design","n","Population","RoB"], char_rows)}
-<h3>Risk of bias</h3>{_table(rob_head, rob_rows) if rob_rows else '<p>—</p>'}
+<h3>Risk of bias (RoB2)</h3>
+<div class="fig">{_rob_svg(state) or '—'}</div>
+{_table(rob_head, rob_rows) if rob_rows else '<p>—</p>'}
 <h3>Forest plot</h3><div class="fig">{_forest_svg(meta)}</div>
 {_table(["Study", p.synthesis.effect_measure, "95% CI", "Weight %"], forest_rows)}
 <p>{esc(s.narrative)}</p>

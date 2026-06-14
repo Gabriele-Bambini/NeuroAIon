@@ -5,9 +5,9 @@
 
 **1. Review title.** Anodal tDCS over the left DLPFC and working memory in healthy adults (PIPELINE DEMONSTRATION — illustrative data)
 
-**2. Anticipated or actual start date.** 2026-06-13
+**2. Anticipated or actual start date.** 2026-06-14
 
-**3. Anticipated completion date.** 2026-06-13
+**3. Anticipated completion date.** 2026-06-14
 
 **4. Stage of review at time of registration.** Completed (automated draft).
 
@@ -21,9 +21,9 @@
 (from 2008-01-01 to 2024-12-31); languages: en.
 Records were de-duplicated and screened in duplicate.
 
-**9. Condition or domain being studied.** Healthy adults 18–65
+**9. Condition or domain being studied.** Healthy adults 18-65
 
-**10. Participants/population.** Healthy adults 18–65
+**10. Participants/population.** Healthy adults 18-65
 
 **11. Intervention(s)/exposure(s).** Anodal tDCS, left DLPFC
 
@@ -34,7 +34,7 @@ Records were de-duplicated and screened in duplicate.
 **14. Inclusion criteria.**
 - Healthy adults
 - Sham-controlled RCT/crossover
-- n-back outcome reported
+- n-back outcome
 
 **15. Exclusion criteria.**
 - Clinical populations

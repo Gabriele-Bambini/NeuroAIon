@@ -55,6 +55,10 @@ _PREAMBLE = r"""\documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{textcomp}
+\usepackage[table]{xcolor}
+\definecolor{roblow}{HTML}{C8E6C9}
+\definecolor{robsome}{HTML}{FFF1C2}
+\definecolor{robhigh}{HTML}{FFCDD2}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{longtable}
@@ -309,6 +313,15 @@ def _characteristics_longtable(state: ReviewState, keys: dict[str, str]) -> str:
     return head + "".join(rows) + "\\bottomrule\n\\caption{Characteristics of included studies.}\n\\end{longtable}\n"
 
 
+_ROB_CELL = {"low": "\\cellcolor{roblow}", "some concerns": "\\cellcolor{robsome}",
+             "high": "\\cellcolor{robhigh}"}
+
+
+def _rob_cell(judgement: str) -> str:
+    j = (judgement or "").lower()
+    return f"{_ROB_CELL.get(j, '')}{esc(judgement or '--')}"
+
+
 def _rob_longtable(state: ReviewState) -> str:
     if not state.rob:
         return "\\textit{No included studies were appraised.}\n"
@@ -320,10 +333,11 @@ def _rob_longtable(state: ReviewState) -> str:
     rows = []
     for a in state.rob:
         jud = {d.name: d.judgement for d in a.domains}
-        cells = " & ".join(esc(jud.get(d, "--")) for d in domains)
-        rows.append(f"{esc(a.study_label[:24])} & {cells} & {esc(a.overall)} \\\\\n")
+        cells = " & ".join(_rob_cell(jud.get(d, "--")) for d in domains)
+        rows.append(f"{esc(a.study_label[:24])} & {cells} & {_rob_cell(a.overall)} \\\\\n")
     return head + "".join(rows) + "\\bottomrule\n\\caption{Risk-of-bias assessment (" \
-        + esc(state.rob[0].tool) + ").}\n\\end{longtable}\n"
+        + esc(state.rob[0].tool) + "; green = low, amber = some concerns, red = high).}" \
+        + "\n\\end{longtable}\n"
 
 
 def _checklist_longtable() -> str:

@@ -12,7 +12,7 @@ from .orchestrator import Orchestrator
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="neuroaion",
-        description="Full-auto, PRISMA 2020-compliant systematic review engine (10 agents).",
+        description="Full-auto, PRISMA 2020-compliant systematic review engine (8 agents).",
     )
     sub = parser.add_subparsers(dest="command")
 
@@ -40,14 +40,19 @@ def main(argv: list[str] | None = None) -> int:
                      help="Stop after screening and export the included set for write-up.")
     run.add_argument("--from-state",
                      help="Resume the redaction half from a screening checkpoint (state.json).")
+    run.add_argument("--save-zip", metavar="PATH",
+                     help="Also save the full review bundle to a local path "
+                          "(e.g. ~/Desktop/review.zip).")
+    run.add_argument("--no-bundle", action="store_true",
+                     help="Do not create the portable zip bundle of artefacts.")
 
-    sub.add_parser("agents", help="List the ten agents and their PRISMA responsibilities.")
+    sub.add_parser("agents", help="List the eight agents and their PRISMA responsibilities.")
 
     args = parser.parse_args(argv)
 
     if args.command == "agents":
         from .agents import ROSTER
-        print("NeuroAIon — the ten-agent PRISMA 2020 roster:\n")
+        print("NeuroAIon — the eight-agent PRISMA 2020 roster:\n")
         for num, name, role in ROSTER:
             print(f"  {num:>2}. {name:<24} {role}")
         return 0
@@ -77,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
             seed, mock=args.mock, live_sources=live,
             model=args.model, max_workers=args.workers, fetch_fulltext=fetch_ft,
             make_latex=not args.no_latex, compile_pdf=not args.no_pdf,
+            make_bundle=not args.no_bundle, save_zip=args.save_zip,
             stop_after=args.stop_after, from_state=from_state,
         )
         if orch.mock:

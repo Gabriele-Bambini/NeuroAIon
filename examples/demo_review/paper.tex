@@ -4,6 +4,10 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{textcomp}
+\usepackage[table]{xcolor}
+\definecolor{roblow}{HTML}{C8E6C9}
+\definecolor{robsome}{HTML}{FFF1C2}
+\definecolor{robhigh}{HTML}{FFCDD2}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{longtable}
@@ -148,13 +152,13 @@ Author5 A 2016~\cite{Author2016} & randomized crossover & 46 & Healthy adults & 
 Study & \rotatebox{0}{Randomization } & \rotatebox{0}{Deviations} & \rotatebox{0}{Missing outcom} & \rotatebox{0}{Measurement of} & \rotatebox{0}{Selection of t} & Overall \\
 \midrule
 \endhead
-Author1 A 2013 & low & some concerns & low & some concerns & low & some concerns \\
-Author2 A 2015 & low & some concerns & low & some concerns & low & some concerns \\
-Author3 A 2012 & low & some concerns & low & some concerns & low & some concerns \\
-Author4 A 2018 & low & some concerns & low & some concerns & low & some concerns \\
-Author5 A 2016 & low & some concerns & low & some concerns & low & some concerns \\
+Author1 A 2013 & \cellcolor{roblow}low & \cellcolor{robsome}some concerns & \cellcolor{roblow}low & \cellcolor{robsome}some concerns & \cellcolor{roblow}low & \cellcolor{robsome}some concerns \\
+Author2 A 2015 & \cellcolor{roblow}low & \cellcolor{robsome}some concerns & \cellcolor{roblow}low & \cellcolor{robsome}some concerns & \cellcolor{roblow}low & \cellcolor{robsome}some concerns \\
+Author3 A 2012 & \cellcolor{roblow}low & \cellcolor{robsome}some concerns & \cellcolor{roblow}low & \cellcolor{robsome}some concerns & \cellcolor{roblow}low & \cellcolor{robsome}some concerns \\
+Author4 A 2018 & \cellcolor{roblow}low & \cellcolor{robsome}some concerns & \cellcolor{roblow}low & \cellcolor{robsome}some concerns & \cellcolor{roblow}low & \cellcolor{robsome}some concerns \\
+Author5 A 2016 & \cellcolor{roblow}low & \cellcolor{robsome}some concerns & \cellcolor{roblow}low & \cellcolor{robsome}some concerns & \cellcolor{roblow}low & \cellcolor{robsome}some concerns \\
 \bottomrule
-\caption{Risk-of-bias assessment (RoB2).}
+\caption{Risk-of-bias assessment (RoB2; green = low, amber = some concerns, red = high).}
 \end{longtable}
 
 \subsection{Synthesis of results}

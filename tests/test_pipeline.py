@@ -48,6 +48,31 @@ def test_full_pipeline_mock(tmp_path: Path):
     assert "PRISMA 2020 checklist" in report
     assert "flowchart" in report  # mermaid flow diagram embedded
 
+    # Local-save: a portable zip bundle of every artefact was created.
+    bundle = run_dir / f"{state.run_id}_bundle.zip"
+    assert bundle.exists()
+    import zipfile
+    names = zipfile.ZipFile(bundle).namelist()
+    assert "report.md" in names and "review.html" in names
+
+
+def test_save_locally(tmp_path):
+    from neuroaion.report import save_locally
+    run = tmp_path / "run"
+    run.mkdir()
+    (run / "report.md").write_text("hello")
+    dest = tmp_path / "Desktop" / "myreview.zip"
+    out = save_locally(run, dest)
+    assert out == dest and out.exists()
+    import zipfile
+    assert "report.md" in zipfile.ZipFile(out).namelist()
+
+
+def test_roster_has_eight_agents():
+    from neuroaion.agents import ROSTER
+    assert len(ROSTER) == 8
+    assert [r[0] for r in ROSTER] == [str(i) for i in range(1, 9)]
+
 
 class _FakeRetriever:
     """An injectable retriever that returns 'full text' for every record — proves

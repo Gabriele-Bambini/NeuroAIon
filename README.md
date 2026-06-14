@@ -5,7 +5,7 @@
 > redatto** (PDF) con formule, figure (diagramma di flusso + forest plot),
 > tabelle, checklist a 27 voci, meta-analisi e bibliografia.
 
-A conductor orchestrates **ten specialised agents** (Claude Opus 4.8) through the
+A conductor orchestrates **eight specialised agents** (Claude Opus 4.8) through the
 entire systematic-review workflow. Every deterministic computation —
 de-duplication, meta-analysis, heterogeneity, **Egger's test**, PRISMA flow
 counts, Cohen's κ — is done in Python; the language model is used only for
@@ -25,20 +25,20 @@ ProtocolArchitect → SearchStrategist → DeduplicationAgent → TitleAbstractS
         → RiskOfBiasAssessor → EvidenceSynthesizer → PRISMAReporter
 ```
 
-## The ten agents (each mapped to PRISMA 2020 items)
+## The eight agents (each mapped to PRISMA 2020 items)
 
 | # | Agent | Responsibility | PRISMA |
 |---|-------|----------------|--------|
 | 1 | **ProtocolArchitect** | Research question, PICO/PECO, eligibility contract | 4–7 |
-| 2 | **SearchStrategist** | Per-database Boolean strategies + identification | 6–8 |
-| 3 | **DeduplicationAgent** | Cross-source de-duplication (DOI + fuzzy title) | 16a |
-| 4 | **TitleAbstractScreener** | Reviewer 1 — title/abstract screening | 8 |
-| 5 | **DualScreenAdjudicator** | Reviewer 2 + conflict resolution, Cohen's κ | 8, 16 |
-| 6 | **FullTextEligibility** | Full-text assessment + exclusion reasons | 16b |
-| 7 | **DataExtractor** | Structured extraction (PICO, designs, effect sizes) | 9–10 |
-| 8 | **RiskOfBiasAssessor** | RoB2 / ROBINS-I / Newcastle–Ottawa + GRADE | 11–12, 15 |
-| 9 | **EvidenceSynthesizer** | Qualitative synthesis + random-effects meta-analysis (I², τ²) | 13, 20 |
-| 10 | **PRISMAReporter** | Flow diagram, 27-item checklist, full manuscript + QA | 14–27 |
+| 2 | **SearchStrategist** | Per-database strategies, identification + de-duplication | 7–8, 16a |
+| 3 | **TitleAbstractScreener** | Dual independent screening + Cohen's κ | 8 |
+| 4 | **EligibilityAdjudicator** | Conflict resolution, full-text retrieval + eligibility | 8, 16b |
+| 5 | **DataExtractor** | Structured extraction (PICO, designs, effect sizes) | 9–10 |
+| 6 | **RiskOfBiasAssessor** | RoB2 / ROBINS-I / Newcastle–Ottawa + GRADE (traffic-light figure) | 11–12, 15 |
+| 7 | **EvidenceSynthesizer** | Random-effects meta-analysis (I², τ²) + Egger's/funnel | 13–14, 20 |
+| 8 | **PRISMAReporter** | Flow diagram, manuscript (PDF/LaTeX/HTML) + PROSPERO + checklist | 16–27 |
+
+Deterministic helpers (de-duplication, conflict resolution) run inside the owning agent.
 
 ## Quickstart
 
@@ -61,7 +61,9 @@ Outputs land in `runs/<timestamp>/`:
 | File | Contents |
 |------|----------|
 | **`paper.tex`** | **Publication-grade LaTeX paper** — self-contained, `latexmk -pdf`-ready: title/abstract, methods with typeset estimator **equations**, **TikZ PRISMA flow diagram** + **TikZ forest plot** (vector figures), booktabs tables, GRADE, 27-item checklist, embedded BibTeX |
-| **`paper.pdf`** | The compiled PDF (when a TeX engine is available, or via the GitHub Action) |
+| **`paper.pdf`** | **Journal-grade PDF** rendered natively (ReportLab, no LaTeX needed): two-column layout, full-width title/abstract, vector forest + funnel + PRISMA figures, and a **RoB2 traffic-light** figure |
+| `review.html` | Self-contained HTML (inline SVG figures incl. RoB traffic-light) — opens in any browser |
+| `<run>_bundle.zip` | **Portable bundle of every artefact** — the pipeline's local-save deliverable |
 | `references.bib` | BibTeX bibliography of included studies |
 | `report.md` | The same review as Markdown (Mermaid flow diagram, GitHub-renderable) |
 | `state.json` | Complete, resumable run state (every decision, every score) |
@@ -69,6 +71,20 @@ Outputs land in `runs/<timestamp>/`:
 | `extractions.json` | Structured data-extraction records |
 | `included_studies.csv` | Final included set with citations + DOIs |
 | `prospero_registration.md` | Ready-to-submit PROSPERO registration form (PRISMA 24) |
+
+### Saving locally
+
+Every run writes a portable `‹run›_bundle.zip` containing all artefacts. To drop
+the bundle straight onto your machine (e.g. the Desktop) when running locally:
+
+```bash
+# Save all outputs to a chosen folder/zip on your machine:
+python scripts/run_review.py -p protocol.yaml --out ~/Desktop/my_review \
+    --save-zip ~/Desktop/my_review.zip
+```
+
+`--out` controls where the run directory is written; `--save-zip PATH` also copies
+the bundle to any local path. From Python: `neuroaion.report.save_locally(out_dir, dest)`.
 
 ### Compile the PDF
 

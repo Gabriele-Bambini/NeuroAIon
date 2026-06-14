@@ -1,4 +1,4 @@
-"""The conductor: drives the ten agents through the full PRISMA 2020 pipeline."""
+"""The conductor: drives the eight agents through the full PRISMA 2020 pipeline."""
 from __future__ import annotations
 
 import sys
@@ -28,6 +28,7 @@ class Orchestrator:
                  fulltext_retriever: Optional[FullTextRetriever] = None,
                  fetch_fulltext: Optional[bool] = None,
                  make_latex: bool = True, compile_pdf: bool = True,
+                 make_bundle: bool = True, save_zip: Optional[str] = None,
                  stop_after: Optional[str] = None, from_state: Optional[ReviewState] = None,
                  logger: Optional[Callable[[str], None]] = None):
         self.seed = seed
@@ -62,6 +63,9 @@ class Orchestrator:
         # LaTeX paper generation + optional local PDF compilation.
         self.make_latex = make_latex
         self.want_pdf = compile_pdf
+        # Local-save: bundle every artefact into a zip, optionally copied to a path.
+        self.make_bundle = make_bundle
+        self.save_zip = save_zip
 
     def log(self, msg: str, state: ReviewState | None = None) -> None:
         self._log_fn(msg)
@@ -83,14 +87,14 @@ class Orchestrator:
         out_dir = Path(out_root) / run_id
 
         # Agent 1 — protocol
-        self._log_fn(f"[1/10] ProtocolArchitect · building protocol …")
+        self._log_fn(f"[1/8] ProtocolArchitect · building protocol …")
         protocol = ProtocolArchitect(self.provider, self.seed_protocol_stub()).build(self.seed)
         state = ReviewState(run_id=run_id, mock=self.mock,
                             model=("mock" if self.mock else self.model), protocol=protocol)
         self.log(f"Protocol: “{protocol.title}”. Question: {protocol.question}", state)
 
         # Agent 2 — search strategy + identification
-        self.log("[2/10] SearchStrategist · designing queries & searching …", state)
+        self.log("[2/8] SearchStrategist · search, identify & de-duplicate …", state)
         strategist = SearchStrategist(self.provider, protocol)
         state.strategy = strategist.design()
         state.records = self._identify(state)
@@ -99,12 +103,12 @@ class Orchestrator:
         self._checkpoint(out_dir, state)
 
         # Agent 3 — deduplication
-        self.log("[3/10] DeduplicationAgent · removing duplicates …", state)
+        self.log("      · de-duplication …", state)
         state.unique_records, removed = DeduplicationAgent(self.provider, protocol).run(state.records)
         self.log(f"{removed} duplicates removed → {len(state.unique_records)} unique records.", state)
 
         # Agents 4 & 5 — dual screening + adjudication
-        self.log("[4-5/10] Dual screening (Reviewer 1 + Reviewer 2) & adjudication …", state)
+        self.log("[3/8] TitleAbstractScreener · dual independent screening + κ …", state)
         self._screen(state)
         self.log(f"Cohen's κ = {state.cohen_kappa}. "
                  f"{len(state.included_after_screening)} records retained for full text.", state)
@@ -125,23 +129,23 @@ class Orchestrator:
         out_dir.mkdir(parents=True, exist_ok=True)
         # Agent 6 — full-text retrieval + eligibility
         if self.retriever is not None:
-            self.log("[6/10] FullTextEligibility · retrieving reports (PMC / Europe PMC) …", state)
+            self.log("[4/8] EligibilityAdjudicator · retrieving reports (PMC / Europe PMC) …", state)
             self._retrieve_fulltexts(state)
             got = sum(1 for ft in self._fulltext.values() if ft.retrieved)
             self.log(f"Full text retrieved for {got}/{len(self._fulltext)} reports "
                      f"(remainder assessed from abstract).", state)
         else:
-            self.log("[6/10] FullTextEligibility · assessing reports …", state)
+            self.log("[4/8] EligibilityAdjudicator · adjudicating & assessing reports …", state)
         self._eligibility(state)
         self.log(f"{len(state.included_studies)} studies eligible for inclusion.", state)
 
         # Agents 7 & 8 — extraction + risk of bias
-        self.log("[7-8/10] DataExtractor & RiskOfBiasAssessor · on included studies …", state)
+        self.log("[5-6/8] DataExtractor & RiskOfBiasAssessor · on included studies …", state)
         self._extract_and_appraise(state)
         self._checkpoint(out_dir, state)
 
         # Agent 9 — synthesis
-        self.log("[9/10] EvidenceSynthesizer · qualitative + quantitative synthesis …", state)
+        self.log("[7/8] EvidenceSynthesizer · synthesis, meta-analysis & publication bias …", state)
         state.synthesis = EvidenceSynthesizer(self.provider, protocol).synthesize(
             state.extractions, state.rob)
         if state.synthesis.meta_analysis:
@@ -151,7 +155,7 @@ class Orchestrator:
 
         # PRISMA flow + Agent 10 — reporting
         state.prisma = compute_flow(state)
-        self.log("[10/10] PRISMAReporter · writing manuscript, flow diagram & checklist …", state)
+        self.log("[8/8] PRISMAReporter · manuscript, figures, PDF/LaTeX/PROSPERO …", state)
         prose = PRISMAReporter(self.provider, protocol).write_prose(state)
         report_path = write_artifacts(out_dir, state, prose)
 
@@ -170,6 +174,15 @@ class Orchestrator:
         self.log(f"✓ Review complete. Report: {report_path}", state)
         # Final checkpoint with the populated log.
         (out_dir / "state.json").write_text(state.model_dump_json(indent=2), encoding="utf-8")
+
+        # Local-save: portable zip bundle of every artefact.
+        if self.make_bundle:
+            from .report import bundle_run, save_locally
+            z = bundle_run(out_dir)
+            self.log(f"📦 Bundle saved: {z}", state)
+            if self.save_zip:
+                dest = save_locally(out_dir, self.save_zip)
+                self.log(f"💾 Saved locally to: {dest}", state)
         return state
 
     # ── Phase helpers ────────────────────────────────────────────────────────

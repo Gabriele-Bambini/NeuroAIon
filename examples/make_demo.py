@@ -151,6 +151,7 @@ def main():
     out = Path(__file__).resolve().parents[1] / "runs" / "demo"
     R.write_artifacts(out, st, PROSE)
     R.write_latex(out, st, PROSE)
+    R.bundle_run(out)
     m = st.synthesis.meta_analysis
     print(f"Pooled {m.measure}={m.pooled_estimate} [{m.ci_lower}, {m.ci_upper}] "
           f"I2={m.i_squared}% k={m.k_studies} | Egger p={m.eggers_p} | kappa={st.cohen_kappa}")

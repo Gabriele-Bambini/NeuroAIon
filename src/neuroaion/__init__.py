@@ -1,6 +1,6 @@
 """NeuroAIon — a full-auto, PRISMA 2020-compliant systematic review engine.
 
-A conductor orchestrates ten specialised Claude agents through the complete
+A conductor orchestrates eight specialised Claude agents through the complete
 systematic-review workflow: protocol → search → de-duplication → dual screening
 → full-text eligibility → data extraction → risk-of-bias → synthesis → PRISMA
 reporting. Deterministic computations (deduplication, meta-analysis, PRISMA flow
