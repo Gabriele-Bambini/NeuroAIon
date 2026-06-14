@@ -269,8 +269,52 @@ def write_artifacts(out_dir: Path, state: ReviewState, prose: dict[str, str]) ->
     from . import audit, documents
     documents.write_documents(out_dir, state)
     audit.write_audit(out_dir, state)
+    write_sources(out_dir, state)
 
     return report_path
+
+
+def write_sources(out_dir: Path, state: ReviewState) -> Path:
+    """Save every retrieved source into a `sources/` folder (CSV + JSONL + per
+    included-study notes), with screening status — the saved literature base."""
+    d = Path(out_dir) / "sources"
+    d.mkdir(parents=True, exist_ok=True)
+    inc_screen = set(state.included_after_screening)
+    inc_final = set(state.included_studies)
+
+    def status(uid: str) -> str:
+        if uid in inc_final:
+            return "included"
+        if uid in inc_screen:
+            return "full_text_excluded"
+        return "screened_out"
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["uid", "status", "source", "source_id", "doi", "year", "journal", "title", "url"])
+    for r in state.unique_records:
+        w.writerow([r.uid, status(r.uid), r.source, r.source_id, r.doi, r.year,
+                    r.journal, r.title, r.url])
+    (d / "sources.csv").write_text(buf.getvalue(), encoding="utf-8")
+    (d / "sources.jsonl").write_text(
+        "\n".join(json.dumps({**r.model_dump(exclude={"raw"}), "status": status(r.uid)},
+                             ensure_ascii=False) for r in state.unique_records),
+        encoding="utf-8")
+
+    # Per included-study note files (title + abstract + link).
+    inc_dir = d / "included"
+    inc_dir.mkdir(exist_ok=True)
+    by_uid = {r.uid: r for r in state.unique_records}
+    for i, uid in enumerate(state.included_studies, 1):
+        r = by_uid.get(uid)
+        if not r:
+            continue
+        name = slugify(f"{i:02d}-{r.title}", 60) + ".md"
+        (inc_dir / name).write_text(
+            f"# {r.title}\n\n{', '.join(r.authors)} — {r.journal} ({r.year})\n\n"
+            f"DOI: {r.doi or '—'} · {r.url}\n\n## Abstract\n\n{r.abstract or '(none)'}\n",
+            encoding="utf-8")
+    return d
 
 
 def write_latex(out_dir: Path, state: ReviewState, prose: dict[str, str]) -> Path:

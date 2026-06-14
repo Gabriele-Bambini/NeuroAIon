@@ -127,14 +127,16 @@ def extraction_form_csv(state: ReviewState) -> str:
         eff = ex.effects[0] if ex.effects else None
         rows.append([
             ex.study_label, ex.design, ex.sample_size, ex.population,
-            ex.intervention, ex.comparator,
-            "; ".join(ex.outcomes), eff.measure if eff else "",
-            eff.estimate if eff else "", eff.ci_lower if eff else "",
-            eff.ci_upper if eff else "", eff.se if eff else "", ex.funding,
+            ex.intervention, ex.comparator, "; ".join(ex.outcomes),
+            ex.gold_standard, "; ".join(ex.datasets), "; ".join(ex.baselines),
+            eff.measure if eff else "", eff.estimate if eff else "",
+            eff.ci_lower if eff else "", eff.ci_upper if eff else "",
+            eff.se if eff else "", ex.notes,
         ])
     return _csv(rows, ["study", "design", "n", "population", "intervention",
-                       "comparator", "outcomes", "measure", "estimate",
-                       "ci_lower", "ci_upper", "se", "funding"])
+                       "comparator", "outcomes", "gold_standard", "datasets",
+                       "baselines", "measure", "estimate", "ci_lower", "ci_upper",
+                       "se", "notes"])
 
 
 def risk_of_bias_md(state: ReviewState) -> str:
@@ -177,6 +179,26 @@ def summary_of_findings_md(state: ReviewState) -> str:
 """
 
 
+def method_comparison_md(state: ReviewState) -> str:
+    """Benchmark leaderboard: each method vs its gold-standard reference networks."""
+    md = ["# Method comparison vs gold standard — benchmark map", "",
+          "Each included method, the data modality it was evaluated on, the "
+          "gold-standard / ground-truth network(s) used for evaluation, the "
+          "baselines it was compared against, and the reported outcome.", "",
+          "| Study | Method (GNN type) | Data modality | Gold standard / benchmark | "
+          "Baselines compared | Outcome metric | Reported result |",
+          "|---|---|---|---|---|---|---|"]
+    for ex in state.extractions:
+        metrics = ", ".join(ex.outcomes) or "—"
+        baselines = ", ".join(ex.baselines) or "—"
+        md.append(f"| {ex.study_label} | {ex.intervention or '—'} | "
+                  f"{ex.population or '—'} | {ex.gold_standard or '—'} | "
+                  f"{baselines} | {metrics} | {(ex.notes or '—')[:120]} |")
+    if not state.extractions:
+        md.append("| _no included studies_ | | | | | | |")
+    return "\n".join(md)
+
+
 def prisma_checklist_md(state: ReviewState) -> str:
     cov = PRISMAReporter.coverage_map()
     md = ["# PRISMA 2020 checklist", "", "| # | Item | Reported in |", "|---|---|---|"]
@@ -208,4 +230,5 @@ def write_documents(out_dir: Path, state: ReviewState) -> list[Path]:
     w("06_risk_of_bias.md", risk_of_bias_md(state))
     w("07_summary_of_findings.md", summary_of_findings_md(state))
     w("08_prisma_checklist.md", prisma_checklist_md(state))
+    w("09_method_comparison.md", method_comparison_md(state))
     return written

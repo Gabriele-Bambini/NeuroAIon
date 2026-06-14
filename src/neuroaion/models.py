@@ -173,6 +173,10 @@ class ExtractionRecord(BaseModel):
     sample_size: Optional[int] = None
     outcomes: list[str] = Field(default_factory=list)
     effects: list[EffectEstimate] = Field(default_factory=list)
+    # Benchmark / gold-standard comparison (methodological reviews).
+    gold_standard: str = ""      # reference network(s), e.g. "DREAM5; TRRUST; ChIP-seq"
+    datasets: list[str] = Field(default_factory=list)
+    baselines: list[str] = Field(default_factory=list)
     funding: str = ""
     notes: str = ""
 
