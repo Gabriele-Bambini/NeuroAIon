@@ -189,13 +189,15 @@ class EvidenceSynthesizer(Agent):
         else:
             imp_judge, imp_steps = "not serious", 0
 
-        # Publication bias: Egger p<0.10 or trim-and-fill imputed studies.
-        pub_bias = (meta.eggers_p is not None and meta.eggers_p < 0.10) or \
-                   bool(meta.trimfill_missing)
-        if pub_bias:
-            other_judge, other_steps = "suspected", 1
+        # Publication bias: only assessable with enough studies (small-study tests
+        # are underpowered below ~10 studies — GRADE/Cochrane guidance). Below that,
+        # report as undetected rather than downgrading on noise.
+        if (meta.k_studies or 0) >= 10:
+            pub_bias = (meta.eggers_p is not None and meta.eggers_p < 0.10) or \
+                       bool(meta.trimfill_missing)
+            other_judge, other_steps = ("suspected", 1) if pub_bias else ("none", 0)
         else:
-            other_judge, other_steps = "none", 0
+            other_judge, other_steps = "undetected (k<10)", 0
 
         steps = rob_steps + incons_steps + imp_steps + other_steps
         # Indirectness: not assessed deterministically (kept "not serious").
