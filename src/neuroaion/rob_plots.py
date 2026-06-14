@@ -64,13 +64,28 @@ def build_rob_traffic_figure(assessments: list["object"]):
         raise ValueError("no assessments")
 
     domains = _domain_order(assessments)
-    cols = domains + ["Overall"]
+    codes = [f"D{i + 1}" for i in range(len(domains))]
+    cols = codes + ["Overall"]
     n_rows, n_cols = len(assessments), len(cols)
     tool = getattr(assessments[0], "tool", "RoB")
 
+    # Wrapped domain key (D1 = …, D2 = …) for the caption strip.
+    key_items = [f"{c} {_short(d, 30)}" for c, d in zip(codes, domains)]
+    key_lines, line = [], ""
+    for it in key_items:
+        trial = (line + "    " + it).strip()
+        if len(trial) > 64 and line:
+            key_lines.append(line)
+            line = it
+        else:
+            line = trial
+    if line:
+        key_lines.append(line)
+    key_text = "\n".join(key_lines)
+
     cell = 0.62
-    fig_w = max(5.0, 2.6 + cell * n_cols)
-    fig_h = max(2.6, 1.9 + cell * n_rows)
+    fig_w = max(5.4, 3.0 + cell * n_cols)
+    fig_h = max(3.0, 2.0 + cell * n_rows + 0.22 * len(key_lines))
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), dpi=150)
     ax.set_xlim(0, n_cols)
     ax.set_ylim(0, n_rows)
@@ -83,12 +98,11 @@ def build_rob_traffic_figure(assessments: list["object"]):
     for j in range(n_cols + 1):
         ax.plot([j, j], [0, n_rows], color="#e3e3e3", lw=0.5, zorder=0)
 
-    # Column headers (rotated), with Overall set apart in bold.
+    # Compact column headers (D1…Dn upright; Overall bold).
     for j, col in enumerate(cols):
         bold = col == "Overall"
-        ax.text(j + 0.5, n_rows + 0.12, _short(col, 30), rotation=55,
-                ha="left", va="bottom", fontsize=7.4,
-                fontweight="bold" if bold else "normal",
+        ax.text(j + 0.5, n_rows + 0.18, col, rotation=0, ha="center", va="bottom",
+                fontsize=7.8, fontweight="bold" if bold else "bold",
                 color="#15202b")
 
     # Rows top-to-bottom = first study at top.
@@ -96,30 +110,35 @@ def build_rob_traffic_figure(assessments: list["object"]):
         y = n_rows - 1 - r + 0.5
         label = getattr(a, "study_label", "") or getattr(a, "uid", "")
         ax.text(-0.18, y, _short(str(label), 30), ha="right", va="center",
-                fontsize=7.4, color="#15202b")
+                fontsize=7.6, color="#15202b")
         by_name = {d.name: _norm_level(d.judgement) for d in a.domains}
         cells = [by_name.get(dn, "some concerns") for dn in domains]
         cells.append(_norm_level(getattr(a, "overall", "some concerns")))
         for j, lvl in enumerate(cells):
-            ax.scatter([j + 0.5], [y], s=190, marker="o",
-                       color=ROB_FILL[lvl], edgecolors="white", linewidths=1.0,
+            ax.scatter([j + 0.5], [y], s=210, marker="o",
+                       color=ROB_FILL[lvl], edgecolors="white", linewidths=1.1,
                        zorder=3)
             ax.text(j + 0.5, y, ROB_SYMBOL[lvl], ha="center", va="center",
-                    fontsize=8.5, fontweight="bold",
+                    fontsize=9, fontweight="bold",
                     color=ROB_SYMBOL_COLOR[lvl], zorder=4)
 
-    # Legend below the grid.
+    # Judgement legend below the grid.
     handles = [
         Line2D([0], [0], marker="o", linestyle="", markersize=9,
                markerfacecolor=ROB_FILL[lv], markeredgecolor="white",
                label=f"{ROB_SYMBOL[lv]}  {_LABEL[lv]}")
         for lv in _LEVELS
     ]
-    ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.02),
-              ncol=3, frameon=False, fontsize=7.2, handletextpad=0.4,
-              columnspacing=1.4, title=f"{tool} risk-of-bias judgement",
-              title_fontsize=7.4)
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.86, bottom=0.16)
+    leg = ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.04),
+                    ncol=3, frameon=False, fontsize=7.2, handletextpad=0.4,
+                    columnspacing=1.4, title=f"{tool} risk-of-bias judgement",
+                    title_fontsize=7.4)
+    ax.add_artist(leg)
+    # Domain key strip.
+    ax.text(0.5, -0.04 - 0.055 * (2 + len(key_lines)), key_text,
+            transform=ax.transAxes, ha="center", va="top", fontsize=6.6,
+            color="#3a3f47", linespacing=1.45)
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.88, bottom=0.10)
     return fig
 
 

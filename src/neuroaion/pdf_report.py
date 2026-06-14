@@ -37,8 +37,14 @@ def _styles():
         "affil": ParagraphStyle("affil", fontName="Helvetica-Oblique", fontSize=8,
                                  leading=10, textColor=colors.HexColor(MUTED), spaceAfter=6),
         "abstract": ParagraphStyle("abstract", **{**base, "fontSize": 8.8, "leading": 11.6}),
-        "h": ParagraphStyle("h", fontName="Helvetica-Bold", fontSize=9.2, leading=11,
-                             textColor=colors.HexColor(ACCENT), spaceBefore=8, spaceAfter=3),
+        "h": ParagraphStyle("h", fontName="Helvetica-Bold", fontSize=9.4, leading=11.5,
+                             textColor=colors.HexColor(ACCENT), spaceBefore=9, spaceAfter=2),
+        "kw": ParagraphStyle("kw", fontName="Times-Roman", fontSize=7.8, leading=10,
+                             textColor=colors.HexColor(INK), alignment=TA_JUSTIFY,
+                             spaceBefore=3, spaceAfter=1),
+        "h3": ParagraphStyle("h3", fontName="Helvetica-BoldOblique", fontSize=8.4,
+                             leading=10.5, textColor=colors.HexColor(INK),
+                             spaceBefore=6, spaceAfter=1),
         "body": ParagraphStyle("body", **base),
         "cap": ParagraphStyle("cap", fontName="Helvetica", fontSize=7.2, leading=9,
                                textColor=colors.HexColor(INK), alignment=TA_LEFT, spaceAfter=6),
@@ -57,6 +63,52 @@ def _para(text, style):
 def _caption(n, text, S):
     from reportlab.platypus import Paragraph
     return Paragraph(f"<b>Figure {n} |</b> {html.escape(text)}", S["cap"])
+
+
+def _abstract_html(prose) -> str:
+    """Render the abstract as HTML for a Paragraph — structured (bold run-in
+    Background/Methods/Results/Conclusions) when a dict is supplied, else plain."""
+    a = prose.get("abstract", "")
+    if isinstance(a, dict):
+        order = ["background", "methods", "results", "conclusions"]
+        keys = [k for k in order if a.get(k)] + [k for k in a if k not in order and a.get(k)]
+        return " ".join(f"<b>{k.capitalize()}.</b> {html.escape(str(a[k]).strip())}"
+                        for k in keys)
+    return html.escape(str(a or "").strip())
+
+
+def _keywords(state) -> str:
+    """A compact keyword line derived from the protocol (journals expect one)."""
+    p = state.protocol
+    kws = []
+    for v in (p.pico.intervention, p.pico.outcome, p.pico.population):
+        v = (v or "").split("(")[0].strip()
+        if v:
+            kws.append(v.lower())
+    kws.append(f"{p.risk_of_bias.tool.lower()} risk of bias")
+    kws.append("PRISMA 2020")
+    # De-duplicate, keep order, cap at 6.
+    seen, out = set(), []
+    for k in kws:
+        if k and k not in seen:
+            seen.add(k)
+            out.append(k)
+    return "; ".join(out[:6])
+
+
+def _band_height(flowables, avail_w: float) -> float:
+    """Total laid-out height of the title-block flowables (incl. inter-flow spacing)."""
+    total = 0.0
+    for f in flowables:
+        try:
+            _, h = f.wrap(avail_w, 1e6)
+        except Exception:  # noqa: BLE001
+            h = 0.0
+        total += h
+        st = getattr(f, "style", None)
+        if st is not None:
+            total += getattr(st, "spaceBefore", 0) + getattr(st, "spaceAfter", 0)
+    return total
 
 
 def _fit(drawing, target_w):
@@ -288,73 +340,112 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
     from reportlab.lib.units import cm
     from reportlab.lib import colors
     from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame, FrameBreak,
-                                    NextPageTemplate, Spacer, Table, TableStyle, KeepInFrame)
+                                    NextPageTemplate, Spacer, Table, TableStyle,
+                                    KeepInFrame, HRFlowable)
 
     p = state.protocol
     s = state.synthesis
     meta = s.meta_analysis
     S = _styles()
     W, H = A4
-    ml = mr = 1.5 * cm
-    mt, mb = 1.4 * cm, 1.5 * cm
-    gut = 0.7 * cm
+    ml = mr = 1.6 * cm
+    mt, mb = 1.5 * cm, 1.5 * cm
+    gut = 0.75 * cm
     colw = (W - ml - mr - gut) / 2
-    top_h = 6.6 * cm
+    full_w = W - ml - mr
 
-    # Frames: full-width title/abstract band, then two columns.
-    top = Frame(ml, H - mt - top_h, W - ml - mr, top_h, id="top",
-                leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=4)
-    fc_l = Frame(ml, mb, colw, H - mt - top_h - mb, id="cl", leftPadding=0, rightPadding=6)
+    # ── Title block (full width). Built first so we can size its band exactly. ──
+    abstract_txt = prose.get("abstract", "") or (
+        f"We systematically reviewed the effect of {p.pico.intervention} on "
+        f"{p.pico.outcome}. {len(state.included_studies)} studies were included.")
+    abs_inner = (_abstract_html(prose)
+                 if isinstance(prose.get("abstract"), dict) else html.escape(str(abstract_txt)))
+    abs_box = Table([[_para(f"<b>Abstract</b> &nbsp; {abs_inner}", S["abstract"])]],
+                    colWidths=[full_w])
+    abs_box.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f5f7f8")),
+        ("LINEABOVE", (0, 0), (-1, 0), 1.2, colors.HexColor(ACCENT)),
+        ("LINEBELOW", (0, -1), (-1, -1), 0.4, colors.HexColor(RULE)),
+        ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7)]))
+
+    title_block = [
+        _para(p.title, S["title"]),
+        _para("NeuroAIon — automated multi-agent systematic-review engine"
+              + (f" &nbsp;·&nbsp; {html.escape(p.authors_contact)}" if p.authors_contact else ""),
+              S["authors"]),
+        _para(f"PRISMA 2020"
+              + (f" &nbsp;·&nbsp; {html.escape(p.registration)}" if p.registration else "")
+              + (" &nbsp;·&nbsp; <b>DEMONSTRATION (illustrative data)</b>" if state.mock else ""),
+              S["affil"]),
+        abs_box,
+        _para(f"<b>Keywords</b> &nbsp; {html.escape(_keywords(state))}", S["kw"]),
+        _para(f"<b>Review question</b> &nbsp; {html.escape(p.question)}", S["kw"]),
+        HRFlowable(width="100%", thickness=0.8, color=colors.HexColor(ACCENT),
+                   spaceBefore=4, spaceAfter=2),
+    ]
+    # Size the full-width band to exactly fit the title block (no overflow into
+    # the body columns); clamp so at least a third of the page remains for columns.
+    top_h = _band_height(title_block, full_w) + 6
+    top_h = min(top_h, H - mt - mb - 9 * cm)
+
+    # Frames: full-width title/abstract band, then two columns beneath it.
+    top = Frame(ml, H - mt - top_h, full_w, top_h, id="top",
+                leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=2)
+    fc_l = Frame(ml, mb, colw, H - mt - top_h - mb, id="cl", leftPadding=0, rightPadding=7)
     fc_r = Frame(ml + colw + gut, mb, colw, H - mt - top_h - mb, id="cr",
-                 leftPadding=6, rightPadding=0)
-    col_l = Frame(ml, mb, colw, H - mt - mb, id="l", leftPadding=0, rightPadding=6)
-    col_r = Frame(ml + colw + gut, mb, colw, H - mt - mb, id="r", leftPadding=6, rightPadding=0)
+                 leftPadding=7, rightPadding=0)
+    col_l = Frame(ml, mb, colw, H - mt - mb, id="l", leftPadding=0, rightPadding=7)
+    col_r = Frame(ml + colw + gut, mb, colw, H - mt - mb, id="r", leftPadding=7, rightPadding=0)
 
-    short = (p.title[:70] + "…") if len(p.title) > 70 else p.title
+    short = (p.title[:78] + "…") if len(p.title) > 78 else p.title
 
     def header(canvas, doc):
         canvas.saveState()
         canvas.setFont("Helvetica", 7)
         canvas.setFillColor(colors.HexColor(MUTED))
-        canvas.drawString(ml, H - mt + 8, "NeuroAIon · automated systematic review")
-        canvas.drawRightString(W - mr, H - mt + 8, f"{doc.page}")
+        canvas.drawString(ml, H - mt + 9, short if doc.page > 1 else
+                          "NeuroAIon · automated systematic review")
+        canvas.drawRightString(W - mr, H - mt + 9, f"{doc.page}")
         canvas.setStrokeColor(colors.HexColor(RULE))
         canvas.setLineWidth(0.5)
-        canvas.line(ml, H - mt + 4, W - mr, H - mt + 4)
+        canvas.line(ml, H - mt + 5, W - mr, H - mt + 5)
         canvas.restoreState()
 
     doc = BaseDocTemplate(str(path), pagesize=A4, title=p.title,
-                          author="NeuroAIon")
+                          author="NeuroAIon", leftMargin=ml, rightMargin=mr,
+                          topMargin=mt, bottomMargin=mb)
     doc.addPageTemplates([
         PageTemplate(id="first", frames=[top, fc_l, fc_r], onPage=header),
         PageTemplate(id="rest", frames=[col_l, col_r], onPage=header),
     ])
 
-    abstract_txt = prose.get("abstract", "") or (
-        f"We systematically reviewed the effect of {p.pico.intervention} on "
-        f"{p.pico.outcome}. {len(state.included_studies)} studies were included.")
-    abs_box = Table([[_para(f"<b>Abstract.</b> {html.escape(abstract_txt)}", S["abstract"])]],
-                    colWidths=[W - ml - mr])
-    abs_box.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f5f7f7")),
-        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor(RULE)),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]))
+    story = list(title_block) + [NextPageTemplate("rest"), FrameBreak()]
 
-    story = [
-        _para(p.title, S["title"]),
-        _para("NeuroAIon automated systematic-review engine"
-              + (f" · {html.escape(p.authors_contact)}" if p.authors_contact else ""),
-              S["authors"]),
-        _para(f"PRISMA 2020 · {p.registration}"
-              + (" · DEMONSTRATION (illustrative data)" if state.mock else ""), S["affil"]),
-        abs_box,
-        _para(f"<b>Review question.</b> {html.escape(p.question)}", S["body"]),
-        NextPageTemplate("rest"), FrameBreak(),
-    ]
+    from reportlab.platypus import HRFlowable as _HR
+    secn = [0]
+    NUMBERED = {"Introduction", "Methods", "Results", "Discussion", "Conclusions"}
 
-    def H2(t):
-        story.append(_para(t.upper(), S["h"]))
+    def H2(t, numbered=None):
+        from reportlab.lib import colors as _c
+        num = numbered if numbered is not None else (t in NUMBERED)
+        if num:
+            secn[0] += 1
+            label = f"{secn[0]}&nbsp;&nbsp;{t.upper()}"
+        else:
+            label = t.upper()
+        story.append(_para(label, S["h"]))
+        story.append(_HR(width="100%", thickness=0.5, color=_c.HexColor(RULE),
+                         spaceBefore=0, spaceAfter=3))
+
+    def H3(t):
+        # Subsection heading: numbered <main>.<n>, lighter, no rule.
+        sub = getattr(H3, "_n", 0) + 1
+        H3._n = sub
+        story.append(_para(f"{secn[0]}.{sub}&nbsp;&nbsp;{html.escape(t)}", S["h3"]))
+
+    def _reset_sub():
+        H3._n = 0
 
     fign = [0]
 
@@ -383,6 +474,8 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         f"examined with Egger's test and a funnel plot.", S["body"]))
 
     H2("Results")
+    _reset_sub()
+    H3("Study selection")
     figure(_prisma_drawing(state.prisma), "PRISMA 2020 study-selection flow diagram.",
            png_name="prisma_flow")
     if meta:
@@ -398,11 +491,12 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         for e in state.extractions:
             data.append([e.study_label, (e.design or "-")[:18], str(e.sample_size or "-"),
                          rob_o.get(e.uid, "-")])
-        H2("Characteristics of included studies")
+        H3("Characteristics of included studies")
+        story.append(_para("<b>Table 1 |</b> Characteristics of the included studies.", S["cap"]))
         story.append(_table(data, [colw * x for x in (0.42, 0.30, 0.12, 0.16)]))
 
     if state.rob:
-        H2(f"Risk of bias ({state.rob[0].tool})")
+        H3(f"Risk of bias ({state.rob[0].tool})")
         figure(_rob_traffic_drawing(state),
                "Risk-of-bias 'traffic-light' summary per study and domain "
                "(green/+ low, amber/- some concerns, red/x high).",
@@ -410,14 +504,14 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         figure(None, "Risk-of-bias summary: distribution of judgements per domain "
                "across the included studies.", png_name="rob_summary")
 
-    H2("Synthesis")
+    H3("Synthesis of results")
     figure(_forest_drawing(meta),
            f"Forest plot of {meta.measure if meta else 'effect'} estimates with the "
            f"{meta.model if meta else 'pooled'} summary (diamond) and 95% prediction "
            f"interval.", png_name="forest")
     story.append(_para(s.narrative, S["body"]))
 
-    H2("Publication bias")
+    H3("Publication bias")
     figure(_funnel_drawing(meta), "Contour-enhanced funnel plot of effect size against "
            "standard error; shaded bands mark conventional significance contours and the "
            "dashed lines the pseudo-95% confidence funnel.", png_name="funnel")
@@ -427,7 +521,7 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
             f"p = {meta.eggers_p}, k = {meta.eggers_k}"
             + (" (under-powered, k &lt; 10)." if (meta.eggers_k or 0) < 10 else "."), S["body"]))
 
-    H2("Certainty of evidence (GRADE)")
+    H3("Certainty of evidence (GRADE)")
     story.append(_para(f"<b>{html.escape(s.grade_certainty or 'not rated')}.</b> "
                        f"{html.escape(s.grade_rationale)}", S["body"]))
     H2("Discussion")
