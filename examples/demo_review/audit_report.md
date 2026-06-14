@@ -1,6 +1,6 @@
 # Audit report — run demo
 
-Generated 2026-06-14T12:48:27.630728Z · engine NeuroAIon 0.1.0 · model `cowork (Claude, illustrative data)` (MOCK / illustrative)
+Generated 2026-06-14T14:34:15.216688Z · engine NeuroAIon 0.1.0 · model `cowork (Claude, illustrative data)` (MOCK / illustrative)
 
 ## Process summary
 - Records identified: **10** (de-duplicated to 8; removed 2).

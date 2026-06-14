@@ -33,15 +33,12 @@ def protocol_md(state: ReviewState) -> str:
 
 **Registration.** {p.registration}  ·  **Contact.** {p.authors_contact or '—'}
 
-## Objective / question (PICO)
+## Objective / question ({p.pico.framework})
 {p.question}
 
-| Element | Specification |
+| {p.pico.framework} element | Specification |
 |---------|---------------|
-| Population | {p.pico.population} |
-| Intervention/Exposure | {p.pico.intervention} |
-| Comparator | {p.pico.comparator} |
-| Outcome | {p.pico.outcome} |
+{chr(10).join(f"| {k} | {v} |" for k, v in p.pico.as_elements().items())}
 | Eligible designs | {', '.join(p.pico.study_designs) or 'any'} |
 
 ## Eligibility criteria

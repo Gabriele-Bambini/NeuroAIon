@@ -5,10 +5,10 @@
 ## Objective / question (PICO)
 In healthy adults, does anodal tDCS over the left DLPFC, versus sham, improve working-memory performance on n-back tasks?
 
-| Element | Specification |
+| PICO element | Specification |
 |---------|---------------|
 | Population | Healthy adults 18-65 |
-| Intervention/Exposure | Anodal tDCS, left DLPFC |
+| Intervention | Anodal tDCS, left DLPFC |
 | Comparator | Sham stimulation |
 | Outcome | n-back accuracy (Hedges g) |
 | Eligible designs | RCT, randomized crossover |

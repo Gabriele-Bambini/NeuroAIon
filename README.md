@@ -40,6 +40,30 @@ ProtocolArchitect → SearchStrategist → DeduplicationAgent → TitleAbstractS
 
 Deterministic helpers (de-duplication, conflict resolution) run inside the owning agent.
 
+## Setup interface (wizard) — any protocol, your folder
+
+Run the wizard, answer the prompts (topic, **framework**, its elements,
+eligibility, sources, **risk-of-bias tool**, **citation style**, …), paste an
+output path, and it writes the protocol and produces the whole dossier **in a
+folder at that path**:
+
+```bash
+neuroaion new                 # interactive: choose everything, then run
+# → writes <your-path>/protocol.yaml and <your-path>/<topic-slug>-<timestamp>/…
+```
+
+**Framework-agnostic.** Supported frameworks: PICO · PECO · PICOS · PECOS ·
+PICOT · PICOTS · SPIDER · PCC (scoping) · PIRD (diagnostic) · CoCoPop
+(prevalence) · SPICE · ECLIPSE. **Risk-of-bias tools:** RoB2 · ROBINS-I ·
+ROBINS-E · Newcastle-Ottawa · QUADAS-2 · AMSTAR-2 · JBI. **Citation styles:**
+Vancouver · APA · Harvard · numeric. All set from the interface (or the
+`protocol.yaml`).
+
+The run folder is named for your topic (e.g.
+`air-pollution-and-asthma-20260614-1432`) and contains the full step-by-step
+dossier (see below). Save it anywhere — `--out /paste/your/path` — or copy the
+bundle out with `--save-zip ~/Desktop/review.zip`.
+
 ## Quickstart
 
 ```bash

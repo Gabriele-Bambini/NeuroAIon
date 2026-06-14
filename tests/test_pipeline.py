@@ -30,8 +30,9 @@ def test_full_pipeline_mock(tmp_path: Path):
     assert orch.mock is True
     state = orch.run(out_root=tmp_path)
 
-    # Artefacts exist.
-    run_dir = tmp_path / state.run_id
+    # Artefacts exist (run folder is a human-readable <slug>-<timestamp>).
+    run_dir = orch.last_out_dir
+    assert run_dir.parent == tmp_path and run_dir.name.startswith("tdcs")
     for fname in ("report.md", "state.json", "prisma_flow.json",
                   "included_studies.csv", "extractions.json"):
         assert (run_dir / fname).exists(), f"missing {fname}"
@@ -49,7 +50,7 @@ def test_full_pipeline_mock(tmp_path: Path):
     assert "flowchart" in report  # mermaid flow diagram embedded
 
     # Local-save: a portable zip bundle of every artefact was created.
-    bundle = run_dir / f"{state.run_id}_bundle.zip"
+    bundle = run_dir / f"{run_dir.name}_bundle.zip"
     assert bundle.exists()
     import zipfile
     names = zipfile.ZipFile(bundle).namelist()
@@ -107,7 +108,7 @@ def test_screen_then_resume_handoff(tmp_path: Path):
     o1 = Orchestrator(SEED, mock=True, live_sources=False, max_workers=4,
                       stop_after="screen")
     s1 = o1.run(out_root=tmp_path)
-    run_dir = tmp_path / s1.run_id
+    run_dir = o1.last_out_dir
     assert (run_dir / "screening_handoff.json").exists()
     assert not (run_dir / "report.md").exists()      # redaction not done yet
     assert s1.included_after_screening and not s1.included_studies
@@ -116,7 +117,7 @@ def test_screen_then_resume_handoff(tmp_path: Path):
     o2 = Orchestrator(SEED, mock=True, live_sources=False, max_workers=4,
                       from_state=s1)
     s2 = o2.run(out_root=tmp_path)
-    write_dir = tmp_path / (s1.run_id + "-writeup")
+    write_dir = o2.last_out_dir
     assert (write_dir / "report.md").exists()
     assert (write_dir / "paper.tex").exists()
     assert s2.prisma.studies_included == len(s2.included_studies)

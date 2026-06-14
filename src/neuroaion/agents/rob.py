@@ -1,25 +1,9 @@
 """Agent 8 — RiskOfBiasAssessor (PRISMA items 11–12, 15)."""
 from __future__ import annotations
 
+from ..frameworks import ROB_TOOLS as _DOMAINS
 from ..models import ExtractionRecord, Record, RoBAssessment, RoBDomain
 from .base import Agent, obj
-
-# Domain sets per appraisal tool.
-_DOMAINS = {
-    "RoB2": [
-        "Randomization process",
-        "Deviations from intended interventions",
-        "Missing outcome data",
-        "Measurement of the outcome",
-        "Selection of the reported result",
-    ],
-    "ROBINS-I": [
-        "Confounding", "Selection of participants", "Classification of interventions",
-        "Deviations from intended interventions", "Missing data",
-        "Measurement of outcomes", "Selection of the reported result",
-    ],
-    "NewcastleOttawa": ["Selection", "Comparability", "Outcome"],
-}
 
 _JUDGEMENT = {"type": "string", "enum": ["low", "some concerns", "high"]}
 

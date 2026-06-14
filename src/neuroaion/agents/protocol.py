@@ -30,6 +30,7 @@ class ProtocolArchitect(Agent):
             registration=(seed.get("reporting") or {}).get("registration", "Not registered"),
             authors_contact=(seed.get("reporting") or {}).get("authors_contact", ""),
             prospero_export=(seed.get("reporting") or {}).get("prospero_export", True),
+            citation_style=(seed.get("reporting") or {}).get("citation_style", "vancouver"),
         )
 
         # Let the model phrase the formal question and sanity-check the criteria,

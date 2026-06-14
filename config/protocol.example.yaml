@@ -10,14 +10,20 @@ title: >-
   Effects of transcranial direct current stimulation (tDCS) on working memory
   in healthy adults: a systematic review and meta-analysis
 
-# The clinical/scientific question in structured form.
-# Use PICO (interventions) or PECO (exposures). Leave blank to let the agent draft it.
+# The structured question. NeuroAIon is framework-agnostic — set `framework` to
+# any of: PICO, PECO, PICOS, PECOS, PICOT, PICOTS, SPIDER, PCC, PIRD, CoCoPop,
+# SPICE, ECLIPSE. For non-PICO frameworks, fill `elements` with the named slots.
 pico:
+  framework: "PICO"
   population: "Healthy adults (18–65 years), no diagnosed neurological or psychiatric disorder"
   intervention: "Anodal transcranial direct current stimulation (tDCS) over DLPFC"
   comparator: "Sham stimulation"
   outcome: "Working-memory performance (n-back accuracy / reaction time, digit span)"
   study_designs: ["randomized controlled trial", "randomized crossover trial"]
+  # For non-PICO frameworks instead use, e.g.:
+  # framework: "SPIDER"
+  # elements: { Sample: "...", "Phenomenon of Interest": "...", Design: "...",
+  #             Evaluation: "...", "Research type": "..." }
 
 # Free-text question (optional; derived from PICO if omitted).
 question: auto
@@ -60,7 +66,8 @@ synthesis:
 
 # Risk-of-bias appraisal (PRISMA item 11).
 risk_of_bias:
-  tool: "RoB2"              # RoB2 | ROBINS-I | NewcastleOttawa
+  # RoB2 | ROBINS-I | ROBINS-E | Newcastle-Ottawa | QUADAS-2 | AMSTAR-2 | JBI
+  tool: "RoB2"
   grade: true               # also produce a GRADE certainty rating
 
 # Reporting.
@@ -68,3 +75,4 @@ reporting:
   authors_contact: "02gabrielebambini@gmail.com"
   registration: "Not registered (to be registered on PROSPERO)"
   prospero_export: true     # write a ready-to-submit PROSPERO registration form
+  citation_style: "vancouver"   # vancouver | apa | harvard | numeric

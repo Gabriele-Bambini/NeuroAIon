@@ -66,6 +66,7 @@ class Orchestrator:
         # Local-save: bundle every artefact into a zip, optionally copied to a path.
         self.make_bundle = make_bundle
         self.save_zip = save_zip
+        self.last_out_dir: Optional[Path] = None
 
     def log(self, msg: str, state: ReviewState | None = None) -> None:
         self._log_fn(msg)
@@ -78,20 +79,26 @@ class Orchestrator:
         # eligibility (the "redaction" half), typically with a premium provider.
         if self.from_state is not None:
             state = self.from_state
-            out_dir = Path(out_root) / (state.run_id + "-writeup")
+            from .report import slugify
+            out_dir = Path(out_root) / f"{slugify(state.protocol.title)}-{state.run_id}-writeup"
+            self.last_out_dir = out_dir
             self.log(f"Resuming from checkpoint: {len(state.included_after_screening)} "
                      f"screened-in records → write-up.", state)
             return self._finish(state, out_dir, state.protocol)
 
         run_id = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-        out_dir = Path(out_root) / run_id
 
         # Agent 1 — protocol
         self._log_fn(f"[1/8] ProtocolArchitect · building protocol …")
         protocol = ProtocolArchitect(self.provider, self.seed_protocol_stub()).build(self.seed)
         state = ReviewState(run_id=run_id, mock=self.mock,
                             model=("mock" if self.mock else self.model), protocol=protocol)
+        # Human-readable run folder: <topic-slug>-<timestamp> at the chosen path.
+        from .report import slugify
+        out_dir = Path(out_root) / f"{slugify(protocol.title)}-{run_id}"
+        self.last_out_dir = out_dir
         self.log(f"Protocol: “{protocol.title}”. Question: {protocol.question}", state)
+        self.log(f"Output folder: {out_dir}", state)
 
         # Agent 2 — search strategy + identification
         self.log("[2/8] SearchStrategist · search, identify & de-duplicate …", state)

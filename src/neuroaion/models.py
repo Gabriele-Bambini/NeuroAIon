@@ -20,6 +20,19 @@ class PICO(BaseModel):
     comparator: str = ""
     outcome: str = ""
     study_designs: list[str] = Field(default_factory=list)
+    # Framework-agnostic: any review type (PICO/PECO/SPIDER/PCC/…) via named elements.
+    framework: str = "PICO"
+    elements: dict[str, str] = Field(default_factory=dict)
+
+    def as_elements(self) -> dict[str, str]:
+        """Return the ordered framework elements as label → value."""
+        if self.elements:
+            return {k: v for k, v in self.elements.items()}
+        # Fall back to the classic PICO/PECO slots.
+        verb = "Exposure" if self.framework.upper().startswith("PEC") else "Intervention"
+        out = {"Population": self.population, verb: self.intervention,
+               "Comparator": self.comparator, "Outcome": self.outcome}
+        return {k: v for k, v in out.items() if v}
 
 
 class SearchConfig(BaseModel):
@@ -55,18 +68,18 @@ class ReviewProtocol(BaseModel):
     registration: str = "Not registered"
     authors_contact: str = ""
     prospero_export: bool = True
+    citation_style: str = "vancouver"
 
     def criteria_block(self) -> str:
         """A compact, cache-friendly rendering of the eligibility contract."""
         inc = "\n".join(f"  - {c}" for c in self.inclusion_criteria) or "  - (none specified)"
         exc = "\n".join(f"  - {c}" for c in self.exclusion_criteria) or "  - (none specified)"
+        elems = "\n".join(f"{k.upper()}: {v}" for k, v in self.pico.as_elements().items())
         return (
             f"TITLE: {self.title}\n"
             f"QUESTION: {self.question}\n"
-            f"POPULATION: {self.pico.population}\n"
-            f"INTERVENTION/EXPOSURE: {self.pico.intervention}\n"
-            f"COMPARATOR: {self.pico.comparator}\n"
-            f"OUTCOME: {self.pico.outcome}\n"
+            f"FRAMEWORK: {self.pico.framework}\n"
+            f"{elems}\n"
             f"ELIGIBLE DESIGNS: {', '.join(self.pico.study_designs) or 'any'}\n"
             f"INCLUSION CRITERIA:\n{inc}\n"
             f"EXCLUSION CRITERIA:\n{exc}"

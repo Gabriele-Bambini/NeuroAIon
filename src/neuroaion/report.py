@@ -72,15 +72,28 @@ def _pub_bias_line(state: ReviewState) -> str:
             f"See the funnel plot in `paper.tex`.")
 
 
+def format_citation(rec, i: int, style: str = "vancouver") -> str:
+    """Format one reference in the requested style."""
+    authors = rec.authors or ["Anon"]
+    yr = rec.year or "n.d."
+    doi = f" https://doi.org/{rec.doi}" if rec.doi else ""
+    style = (style or "vancouver").lower()
+    if style in ("apa", "harvard"):
+        au = authors[0] + (" et al." if len(authors) > 1 else "")
+        return f"{au} ({yr}). {rec.title}. *{rec.journal}*.{doi}"
+    # vancouver / numeric (default): numbered, up to 6 authors then et al.
+    au = ", ".join(authors[:6]) + (", et al." if len(authors) > 6 else "")
+    return f"{i}. {au}. {rec.title}. {rec.journal}. {yr}.{doi}"
+
+
 def _references(state: ReviewState) -> str:
-    included = {u for u in state.included_studies}
     by_uid = {r.uid: r for r in state.unique_records}
+    style = state.protocol.citation_style
     lines = []
     for i, uid in enumerate(state.included_studies, 1):
         r = by_uid.get(uid)
         if r:
-            doi = f" https://doi.org/{r.doi}" if r.doi else ""
-            lines.append(f"{i}. {r.citation()}.{doi}")
+            lines.append(format_citation(r, i, style))
     return "\n".join(lines) or "_No included studies._"
 
 
@@ -268,6 +281,13 @@ def write_latex(out_dir: Path, state: ReviewState, prose: dict[str, str]) -> Pat
     tex_path.write_text(tex, encoding="utf-8")
     (out_dir / "references.bib").write_text(bib, encoding="utf-8")
     return tex_path
+
+
+def slugify(text: str, maxlen: int = 48) -> str:
+    """A filesystem-friendly slug from a title (for human-readable run folders)."""
+    import re
+    s = re.sub(r"[^a-z0-9]+", "-", (text or "review").lower()).strip("-")
+    return (s[:maxlen].rstrip("-")) or "review"
 
 
 def bundle_run(out_dir: Path) -> Path:

@@ -48,7 +48,27 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("agents", help="List the eight agents and their PRISMA responsibilities.")
 
+    new = sub.add_parser("new", help="Interactive setup wizard: choose topic, framework "
+                                     "(PICO/PECO/SPIDER/…), RoB tool, citation style, etc.")
+    new.add_argument("--out", "-o", help="Folder to create for the protocol + outputs.")
+
     args = parser.parse_args(argv)
+
+    if args.command == "new":
+        from . import wizard
+        seed, out_path, run_now = wizard.interactive()
+        out_path = args.out or out_path
+        proto_path = wizard.write_protocol_yaml(seed, Path(out_path) / "protocol.yaml")
+        print(f"\n✓ Protocol saved → {proto_path}")
+        if run_now:
+            orch = Orchestrator(seed)
+            if orch.mock:
+                print("ℹ  No LLM key configured — running in MOCK mode.", file=sys.stderr)
+            orch.run(out_root=out_path)
+            print(f"\nDone → {orch.last_out_dir}")
+        else:
+            print(f"Next:  neuroaion run -p {proto_path} --out {out_path}")
+        return 0
 
     if args.command == "agents":
         from .agents import ROSTER
@@ -88,16 +108,13 @@ def main(argv: list[str] | None = None) -> int:
         if orch.mock:
             print("ℹ  Running in MOCK mode (no ANTHROPIC_API_KEY). "
                   "Set the key for a real, model-authored review.", file=sys.stderr)
-        state = orch.run(out_root=args.out)
-        base = Path(args.out)
+        orch.run(out_root=args.out)
+        d = orch.last_out_dir
         if args.stop_after == "screen":
-            d = base / state.run_id
             print(f"\nScreening checkpoint → {d}/  "
                   f"(resume the write-up with:  --from-state {d}/state.json)")
-        elif args.from_state:
-            print(f"\nDone → {base / (state.run_id + '-writeup') / 'report.md'}")
         else:
-            print(f"\nDone → {base / state.run_id / 'report.md'}")
+            print(f"\nDone → {d}/  (open report.md / paper.pdf / documents/)")
         return 0
 
     parser.print_help()
