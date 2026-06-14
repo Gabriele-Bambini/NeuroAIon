@@ -159,8 +159,34 @@ def risk_of_bias_md(state: ReviewState) -> str:
 
 def summary_of_findings_md(state: ReviewState) -> str:
     s = state.synthesis
-    meta = s.meta_analysis
     p = state.protocol
+
+    # Preferred: a fully-derived multi-outcome GRADE table (one row per outcome).
+    if s.grade_table:
+        head = (
+            "| Outcome | Studies (participants) | Effect | Risk of bias | "
+            "Inconsistency | Indirectness | Imprecision | Other | Certainty (GRADE) | Importance |"
+        )
+        sep = "|" + "---|" * 10
+        rows = [head, sep]
+        for g in s.grade_table:
+            part = f" ({g.n_participants})" if g.n_participants else ""
+            rows.append(
+                f"| {g.outcome} | {g.n_studies}{part} | {g.effect or '—'} | "
+                f"{g.risk_of_bias} | {g.inconsistency} | {g.indirectness} | "
+                f"{g.imprecision} | {g.other} | **{g.certainty}** | {g.importance or '—'} |"
+            )
+        table = "\n".join(rows)
+        return (
+            "# GRADE Summary of Findings — PRISMA item 22\n\n"
+            f"**Question.** {p.question}\n\n"
+            f"{table}\n\n"
+            "GRADE certainty: ⊕⊕⊕⊕ high · ⊕⊕⊕◯ moderate · ⊕⊕◯◯ low · ⊕◯◯◯ very low.\n\n"
+            f"**Overall certainty rationale.** {s.grade_rationale or '—'}\n"
+        )
+
+    # Fallback: single primary outcome (back-compatible).
+    meta = s.meta_analysis
     n_part = sum(e.sample_size or 0 for e in state.extractions)
     effect = (f"{meta.measure} {meta.pooled_estimate} (95% CI {meta.ci_lower} to "
               f"{meta.ci_upper})" if meta else "not pooled")
@@ -176,6 +202,119 @@ def summary_of_findings_md(state: ReviewState) -> str:
 **Certainty rationale.** {s.grade_rationale or '—'}
 
 **Publication bias.** {('Egger intercept=' + str(meta.eggers_intercept) + ', p=' + str(meta.eggers_p) + ', k=' + str(meta.eggers_k)) if meta and meta.eggers_p is not None else 'not formally tested'}.
+"""
+
+
+def declarations_md(state: ReviewState) -> str:
+    """Journal end-matter declarations (CRediT, COI, funding, ethics, availability)."""
+    p = state.protocol
+    return f"""# Declarations
+
+## Author contributions (CRediT taxonomy)
+This review was produced by the NeuroAIon automated multi-agent engine. The
+contributor roles map to the pipeline agents as follows:
+
+| CRediT role | Contributor (agent) |
+|---|---|
+| Conceptualization | ProtocolArchitect (review question & protocol) |
+| Methodology | ProtocolArchitect, SearchStrategist, EvidenceSynthesizer |
+| Investigation (search) | SearchStrategist, DeduplicationAgent |
+| Data curation (screening/extraction) | TitleAbstractScreener, DualScreenAdjudicator, FullTextEligibility, DataExtractor |
+| Formal analysis | EvidenceSynthesizer (meta-analysis), RiskOfBiasAssessor |
+| Visualization | Figure backend (forest, funnel, PRISMA, risk-of-bias) |
+| Writing — original draft | PRISMAReporter |
+| Writing — review & editing | PRISMAReporter, human corresponding author |
+| Supervision | Human corresponding author ({p.authors_contact or '—'}) |
+
+The human corresponding author is responsible for verifying every extracted
+datum and the final manuscript prior to submission.
+
+## Competing interests
+The authors declare no competing interests.
+
+## Funding
+{p.registration if 'fund' in (p.registration or '').lower() else 'No specific grant from any funding agency in the public, commercial, or not-for-profit sectors was received for this review.'}
+
+## Ethics approval
+Not applicable — this is a secondary analysis of previously published studies;
+no new human or animal data were collected.
+
+## Registration and protocol
+{p.registration}. The a-priori protocol is provided as `01_protocol.md` in this
+dossier{'; a PROSPERO-ready registration form is provided as `prospero_registration.md`.' if p.prospero_export else '.'}
+
+## Data and code availability
+All data underlying this review (the full search corpus, screening decisions,
+extracted data, and risk-of-bias assessments) are provided in machine-readable
+form in this run directory (`state.json`, `sources/`, `documents/`,
+`extractions.json`). A SHA-256 integrity manifest (`manifest.json`) accompanies
+the dossier. The NeuroAIon engine source is available in the project repository.
+"""
+
+
+def reporting_summary_md(state: ReviewState) -> str:
+    """A concise reporting summary tying the run's numbers to PRISMA items."""
+    f = state.prisma
+    s = state.synthesis
+    n_meta = len(s.meta_analyses) if s.meta_analyses else (1 if s.meta_analysis else 0)
+    return f"""# Reporting summary
+
+| Item | Value |
+|---|---|
+| Records identified (databases) | {f.records_from_databases or f.records_total} |
+| Records identified (registers) | {f.records_from_registers} |
+| Duplicates removed | {f.duplicates_removed} |
+| Records screened | {f.records_screened} |
+| Records excluded at screening | {f.records_excluded_screening} |
+| Reports sought for retrieval | {f.reports_sought} |
+| Reports not retrieved | {f.reports_not_retrieved} |
+| Reports assessed for eligibility | {f.reports_assessed} |
+| Reports excluded (with reasons) | {sum(f.reports_excluded.values())} |
+| **Studies included** | **{f.studies_included}** |
+| Inter-rater agreement (Cohen's κ) | {state.cohen_kappa if state.cohen_kappa is not None else '—'} |
+| Outcomes meta-analysed | {n_meta} |
+| Risk-of-bias tool | {state.protocol.risk_of_bias.tool} |
+| Certainty of evidence (GRADE) | {s.grade_certainty or 'not rated'} |
+
+This summary supports PRISMA 2020 items 16a (study selection), 17 (characteristics),
+18 (risk of bias), 20 (syntheses) and 22 (certainty).
+"""
+
+
+def extraction_template_csv() -> str:
+    """A blank, ready-to-use data-extraction template (pilot/dual extraction)."""
+    header = ["study_id", "first_author", "year", "doi", "design", "country",
+              "n_total", "n_intervention", "n_comparator", "population",
+              "intervention", "comparator", "outcome", "timepoint", "measure",
+              "estimate", "ci_lower", "ci_upper", "se", "sd_intervention",
+              "sd_comparator", "funding_source", "conflicts", "notes",
+              "extractor", "checked_by"]
+    buf = io.StringIO()
+    csv.writer(buf).writerow(header)
+    return buf.getvalue()
+
+
+def supplementary_index_md(state: ReviewState) -> str:
+    """An index of every artefact in the dossier (the supplementary materials map)."""
+    return """# Supplementary materials — index
+
+| File | Content | PRISMA item(s) |
+|---|---|---|
+| `01_protocol.md` | A-priori review protocol | 24 |
+| `02_search_log.md/.csv` | Full per-database search strategy & hits | 6–7 |
+| `03_screening_log.csv` | Per-record dual screening + adjudication | 8 |
+| `04_excluded_full_text.md/.csv` | Excluded reports with reasons | 16b |
+| `05_data_extraction_form.csv` | Completed extraction for included studies | 9–10 |
+| `05b_extraction_template.csv` | Blank extraction template | 9 |
+| `06_risk_of_bias.md` | Per-study risk-of-bias appraisal | 11, 18 |
+| `07_summary_of_findings.md` | GRADE Summary of Findings | 15, 22 |
+| `08_prisma_checklist.md` | PRISMA 2020 27-item checklist + locators | all |
+| `08b_prisma_abstract_checklist.md` | PRISMA-for-Abstracts 12-item checklist | 2 |
+| `09_method_comparison.md` | Benchmark map vs gold standards | 17, 19 |
+| `10_declarations.md` | CRediT, COI, funding, ethics, availability | 24–27 |
+| `11_reporting_summary.md` | Flow counts & key metrics | 16–22 |
+| `../figures/` | Forest, funnel, PRISMA, risk-of-bias figures | 16, 18–21 |
+| `../manifest.json` | SHA-256 integrity manifest | 27 |
 """
 
 
@@ -218,6 +357,7 @@ def write_documents(out_dir: Path, state: ReviewState) -> list[Path]:
         path.write_text(content, encoding="utf-8")
         written.append(path)
 
+    from .prisma import abstract_checklist_markdown
     search_md, search_csv = search_log(state)
     excl_md, excl_csv = excluded_fulltext(state)
     w("01_protocol.md", protocol_md(state))
@@ -227,8 +367,13 @@ def write_documents(out_dir: Path, state: ReviewState) -> list[Path]:
     w("04_excluded_full_text.md", excl_md)
     w("04_excluded_full_text.csv", excl_csv)
     w("05_data_extraction_form.csv", extraction_form_csv(state))
+    w("05b_extraction_template.csv", extraction_template_csv())
     w("06_risk_of_bias.md", risk_of_bias_md(state))
     w("07_summary_of_findings.md", summary_of_findings_md(state))
     w("08_prisma_checklist.md", prisma_checklist_md(state))
+    w("08b_prisma_abstract_checklist.md", abstract_checklist_markdown())
     w("09_method_comparison.md", method_comparison_md(state))
+    w("10_declarations.md", declarations_md(state))
+    w("11_reporting_summary.md", reporting_summary_md(state))
+    w("00_supplementary_index.md", supplementary_index_md(state))
     return written

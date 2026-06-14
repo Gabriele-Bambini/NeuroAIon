@@ -97,6 +97,16 @@ def _references(state: ReviewState) -> str:
     return "\n".join(lines) or "_No included studies._"
 
 
+def _abstract_text(prose: dict) -> str:
+    """Coerce the abstract (string or structured Background/Methods/… dict) to text."""
+    a = prose.get("abstract", "")
+    if isinstance(a, dict):
+        order = ["background", "methods", "results", "conclusions"]
+        keys = [k for k in order if a.get(k)] + [k for k in a if k not in order and a.get(k)]
+        return " ".join(f"**{k.capitalize()}:** {str(a[k]).strip()}" for k in keys)
+    return (a or "").strip()
+
+
 def build_markdown(state: ReviewState, prose: dict[str, str]) -> str:
     p = state.protocol
     flow = state.prisma
@@ -124,7 +134,7 @@ def build_markdown(state: ReviewState, prose: dict[str, str]) -> str:
 
 ## Abstract
 
-{prose.get('abstract', '').strip() or results_line}
+{_abstract_text(prose) or results_line}
 
 ---
 
@@ -222,9 +232,61 @@ structured form and each included study was appraised with **{p.risk_of_bias.too
     return md
 
 
+def render_figures(out_dir: Path, state: ReviewState) -> dict:
+    """Render publication-quality matplotlib figures (vector PDF + PNG) into the
+    run directory — forest, funnel, PRISMA flow, and risk-of-bias plots. These are
+    embedded by the LaTeX paper (``\\includegraphics``) and the native PDF, with
+    self-contained fallbacks if matplotlib (``neuroaion[figures]``) is absent.
+
+    Best-effort: every backend is guarded so a missing optional dependency never
+    breaks the run. Returns a dict of figure-name → list[Path] actually written.
+    """
+    out_dir = Path(out_dir)
+    figs_dir = out_dir / "figures"
+    written: dict[str, list] = {}
+    meta = state.synthesis.meta_analysis
+    p = state.protocol
+    treatment = (p.pico.intervention or "intervention").split("(")[0].strip()[:24]
+    control = (p.pico.comparator or "control").split("(")[0].strip()[:24]
+
+    try:
+        from . import figures
+        # Meta figures (forest + funnel) into both run root and figures/.
+        if meta and meta.forest:
+            res = figures.save_meta_figures(meta, out_dir, treatment=treatment,
+                                            control=control)
+            figures.save_meta_figures(meta, figs_dir, treatment=treatment, control=control)
+            for k, v in res.items():
+                if v:
+                    written[k] = v
+        # PRISMA 2020 flow diagram.
+        try:
+            written["prisma"] = figures.save_prisma_figure(state.prisma, out_dir)
+            figures.save_prisma_figure(state.prisma, figs_dir)
+        except Exception:  # noqa: BLE001
+            pass
+    except Exception:  # noqa: BLE001 — matplotlib not installed / best-effort
+        pass
+
+    # Risk-of-bias plots (separate optional module).
+    try:
+        from . import rob_plots
+        if state.rob:
+            paths = rob_plots.save_rob_figures(state.rob, out_dir)
+            rob_plots.save_rob_figures(state.rob, figs_dir)
+            if paths:
+                written["rob"] = paths
+    except Exception:  # noqa: BLE001
+        pass
+    return written
+
+
 def write_artifacts(out_dir: Path, state: ReviewState, prose: dict[str, str]) -> Path:
     """Write the manuscript and all machine-readable artefacts; return report path."""
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Render vector figures first so the PDF and LaTeX paper can embed them.
+    render_figures(out_dir, state)
 
     report_path = out_dir / "report.md"
     report_path.write_text(build_markdown(state, prose), encoding="utf-8")
@@ -237,7 +299,7 @@ def write_artifacts(out_dir: Path, state: ReviewState, prose: dict[str, str]) ->
     # Native PDF (no LaTeX needed) if reportlab is installed (neuroaion[pdf]).
     try:
         from . import pdf_report
-        pdf_report.build_pdf(state, prose, out_dir / "paper.pdf")
+        pdf_report.build_pdf(state, prose, out_dir / "paper.pdf", figdir=out_dir)
     except Exception:  # noqa: BLE001 — optional dependency / best-effort
         pass
 

@@ -263,7 +263,27 @@ def _table(data, colw):
     return t
 
 
-def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path) -> Path:
+def _png_image(figdir, name, target_w):
+    """A scaled Image flowable from a rendered matplotlib PNG, or None if absent."""
+    if not figdir:
+        return None
+    from pathlib import Path as _P
+    png = _P(figdir) / f"{name}.png"
+    if not png.exists():
+        return None
+    try:
+        from reportlab.platypus import Image
+        from reportlab.lib.utils import ImageReader
+        iw, ih = ImageReader(str(png)).getSize()
+        if not iw:
+            return None
+        return Image(str(png), width=target_w, height=target_w * ih / iw)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
+              figdir: str | Path | None = None) -> Path:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import cm
     from reportlab.lib import colors
@@ -338,11 +358,14 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path) -> Pa
 
     fign = [0]
 
-    def figure(drawing, caption):
-        if drawing is None:
+    def figure(drawing, caption, png_name=None):
+        # Prefer the high-quality matplotlib PNG when it has been rendered into
+        # the run directory; fall back to the native vector drawing otherwise.
+        img = _png_image(figdir, png_name, colw) if png_name else None
+        if img is None and drawing is None:
             return
         fign[0] += 1
-        story.append(_fit(drawing, colw))
+        story.append(img if img is not None else _fit(drawing, colw))
         story.append(_caption(fign[0], caption, S))
 
     H2("Introduction")
@@ -360,7 +383,8 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path) -> Pa
         f"examined with Egger's test and a funnel plot.", S["body"]))
 
     H2("Results")
-    figure(_prisma_drawing(state.prisma), "PRISMA 2020 study-selection flow diagram.")
+    figure(_prisma_drawing(state.prisma), "PRISMA 2020 study-selection flow diagram.",
+           png_name="prisma_flow")
     if meta:
         story.append(_para(
             f"{len(state.included_studies)} studies were included. The pooled "
@@ -378,20 +402,25 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path) -> Pa
         story.append(_table(data, [colw * x for x in (0.42, 0.30, 0.12, 0.16)]))
 
     if state.rob:
-        H2("Risk of bias (RoB2)")
+        H2(f"Risk of bias ({state.rob[0].tool})")
         figure(_rob_traffic_drawing(state),
                "Risk-of-bias 'traffic-light' summary per study and domain "
-               "(green/+ low, amber/- some concerns, red/x high).")
+               "(green/+ low, amber/- some concerns, red/x high).",
+               png_name="rob_traffic")
+        figure(None, "Risk-of-bias summary: distribution of judgements per domain "
+               "across the included studies.", png_name="rob_summary")
 
     H2("Synthesis")
     figure(_forest_drawing(meta),
            f"Forest plot of {meta.measure if meta else 'effect'} estimates with the "
-           f"{meta.model if meta else 'pooled'} summary (diamond).")
+           f"{meta.model if meta else 'pooled'} summary (diamond) and 95% prediction "
+           f"interval.", png_name="forest")
     story.append(_para(s.narrative, S["body"]))
 
     H2("Publication bias")
-    figure(_funnel_drawing(meta), "Funnel plot of effect size against precision; "
-           "dashed lines mark the pseudo 95% confidence funnel.")
+    figure(_funnel_drawing(meta), "Contour-enhanced funnel plot of effect size against "
+           "standard error; shaded bands mark conventional significance contours and the "
+           "dashed lines the pseudo-95% confidence funnel.", png_name="funnel")
     if meta and meta.eggers_p is not None:
         story.append(_para(
             f"Egger's regression test: intercept = {meta.eggers_intercept}, "

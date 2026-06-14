@@ -29,9 +29,17 @@ def compute_flow(state: ReviewState) -> PrismaFlow:
     )
     included = len(state.included_studies)
 
+    # Split identification by databases vs. registers (clinical-trials registries).
+    register_sources = {"clinicaltrials", "prospero", "ictrp", "who-ictrp"}
+    from_registers = sum(v for k, v in per_source.items()
+                         if k.lower() in register_sources)
+    from_databases = total - from_registers
+
     return PrismaFlow(
         records_identified=dict(per_source),
         records_total=total,
+        records_from_databases=from_databases,
+        records_from_registers=from_registers,
         duplicates_removed=duplicates,
         records_screened=screened,
         records_excluded_screening=excluded_screening,
@@ -40,6 +48,7 @@ def compute_flow(state: ReviewState) -> PrismaFlow:
         reports_assessed=assessed,
         reports_excluded=dict(excluded_reports),
         studies_included=included,
+        reports_of_included=included,
     )
 
 
@@ -102,14 +111,61 @@ CHECKLIST_2020: list[tuple[str, str, str]] = [
 ]
 
 
+# Where in the manuscript each PRISMA 2020 item is located (section locators) —
+# journals require a completed checklist citing the page/section for every item.
+LOCATION_MAP: dict[str, str] = {
+    "1": "Title", "2": "Abstract", "3": "Introduction", "4": "Introduction (Objectives)",
+    "5": "Methods — Eligibility criteria", "6": "Methods — Information sources",
+    "7": "Methods — Search strategy / Supplementary search log",
+    "8": "Methods — Selection process", "9": "Methods — Data collection process",
+    "10": "Methods — Data items", "11": "Methods — Risk-of-bias assessment",
+    "12": "Methods — Effect measures", "13": "Methods — Synthesis methods",
+    "14": "Methods — Reporting-bias assessment", "15": "Methods — Certainty assessment",
+    "16": "Results — Study selection (Figure 1, PRISMA flow)",
+    "17": "Results — Study characteristics (Table 1)",
+    "18": "Results — Risk of bias (Figure, traffic-light)",
+    "19": "Results — Results of individual studies (Forest plot)",
+    "20": "Results — Results of syntheses", "21": "Results — Reporting biases (Funnel plot)",
+    "22": "Results — Certainty of evidence (GRADE SoF)",
+    "23": "Discussion", "24": "Methods — Registration and protocol",
+    "25": "Funding", "26": "Competing interests", "27": "Data and code availability",
+}
+
+# PRISMA 2020 for Abstracts — 12-item checklist.
+PRISMA_ABSTRACT_CHECKLIST: list[tuple[str, str, str]] = [
+    ("1", "Title", "Identify the report as a systematic review."),
+    ("2", "Objectives", "Provide an explicit statement of the main objective(s) or question(s)."),
+    ("3", "Eligibility criteria", "Specify the inclusion and exclusion criteria for the review."),
+    ("4", "Information sources", "Specify the information sources and the date last searched."),
+    ("5", "Risk of bias", "Specify the methods used to assess risk of bias in the studies."),
+    ("6", "Synthesis of results", "Specify the methods used to present and synthesise results."),
+    ("7", "Included studies", "Give the total number of included studies and participants."),
+    ("8", "Synthesis of results", "Present results for main outcomes, preferably with effect estimates and CIs."),
+    ("9", "Limitations of evidence", "Provide a brief summary of the limitations of the evidence."),
+    ("10", "Interpretation", "Provide a general interpretation of the results and important implications."),
+    ("11", "Funding", "Specify the primary source of funding for the review."),
+    ("12", "Registration", "Provide the register name and registration number."),
+]
+
+
 def checklist_markdown(coverage: dict[str, str]) -> str:
     """Render the 27-item checklist as a Markdown table.
 
     `coverage` maps item number → location/note (which agent/section addresses it).
     """
-    lines = ["| # | Item | Description | Addressed by |",
-             "|---|------|-------------|--------------|"]
+    lines = ["| # | Item | Description | Location in report | Addressed by |",
+             "|---|------|-------------|--------------------|--------------|"]
     for num, name, desc in CHECKLIST_2020:
         where = coverage.get(num, "see report")
-        lines.append(f"| {num} | {name} | {desc} | {where} |")
+        loc = LOCATION_MAP.get(num, "see report")
+        lines.append(f"| {num} | {name} | {desc} | {loc} | {where} |")
+    return "\n".join(lines)
+
+
+def abstract_checklist_markdown() -> str:
+    """Render the PRISMA-for-Abstracts 12-item checklist as a Markdown table."""
+    lines = ["# PRISMA 2020 for Abstracts checklist (12 items)", "",
+             "| # | Item | Description |", "|---|------|-------------|"]
+    for num, name, desc in PRISMA_ABSTRACT_CHECKLIST:
+        lines.append(f"| {num} | {name} | {desc} |")
     return "\n".join(lines)

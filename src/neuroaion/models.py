@@ -104,11 +104,17 @@ class Record(BaseModel):
     source: str
     source_id: str = ""
     doi: str = ""
+    pmid: str = ""
     title: str = ""
     abstract: str = ""
     authors: list[str] = Field(default_factory=list)
     year: Optional[int] = None
     journal: str = ""
+    journal_abbrev: str = ""
+    volume: str = ""
+    issue: str = ""
+    pages: str = ""
+    entry_type: str = "article"          # article | preprint | inproceedings | book | misc
     url: str = ""
     raw: dict[str, Any] = Field(default_factory=dict, repr=False)
 
@@ -154,13 +160,15 @@ class EligibilityDecision(BaseModel):
 class EffectEstimate(BaseModel):
     """One quantitative result, normalised for meta-analysis."""
     outcome: str = ""
-    measure: str = "SMD"        # SMD | MD | OR | RR | HR
+    measure: str = "SMD"        # SMD | MD | OR | RR | HR | COR | PROP
     estimate: Optional[float] = None
     ci_lower: Optional[float] = None
     ci_upper: Optional[float] = None
     se: Optional[float] = None
     n_intervention: Optional[int] = None
     n_comparator: Optional[int] = None
+    subgroup: Optional[str] = None       # subgroup label (for subgroup analysis)
+    moderator: Optional[float] = None    # covariate for meta-regression
 
 
 class ExtractionRecord(BaseModel):
@@ -185,6 +193,8 @@ class RoBDomain(BaseModel):
     name: str
     judgement: str = "some concerns"   # low | some concerns | high
     rationale: str = ""
+    support_for_judgement: str = ""    # Cochrane "support for judgement" quote
+    signalling_answers: dict[str, str] = Field(default_factory=dict)
 
 
 class RoBAssessment(BaseModel):
@@ -209,19 +219,68 @@ class MetaAnalysisResult(BaseModel):
     tau_squared: Optional[float] = None
     q_statistic: Optional[float] = None
     forest: list[dict[str, Any]] = Field(default_factory=list)   # per-study rows
+    outcome: str = ""
+    # Estimator / inference provenance.
+    tau2_method: str = "DL"             # DL | REML
+    knha: bool = False                  # Hartung-Knapp-Sidik-Jonkman applied
+    se_pooled: Optional[float] = None
+    test_stat: Optional[float] = None
+    test_dist: str = "z"                # z | t
+    df: Optional[int] = None
+    # Heterogeneity detail.
+    tau: Optional[float] = None
+    H: Optional[float] = None
+    q_p_value: Optional[float] = None
+    i_squared_ci_lower: Optional[float] = None
+    i_squared_ci_upper: Optional[float] = None
+    # 95% prediction interval (Higgins-Thompson-Spiegelhalter).
+    pi_lower: Optional[float] = None
+    pi_upper: Optional[float] = None
+    # Subgroup / meta-regression.
+    subgroups: list[dict[str, Any]] = Field(default_factory=list)
+    q_between: Optional[float] = None
+    q_between_df: Optional[int] = None
+    q_between_p: Optional[float] = None
+    metareg: Optional[dict[str, Any]] = None
+    # Sensitivity analyses.
+    leave_one_out: list[dict[str, Any]] = Field(default_factory=list)
+    cumulative: list[dict[str, Any]] = Field(default_factory=list)
     # Publication-bias assessment (PRISMA item 14).
     eggers_intercept: Optional[float] = None
     eggers_p: Optional[float] = None
     eggers_k: Optional[int] = None
+    begg_tau: Optional[float] = None
+    begg_p: Optional[float] = None
+    trimfill_missing: Optional[int] = None
+    trimfill_side: Optional[str] = None
+    trimfill_adjusted_estimate: Optional[float] = None
     funnel: list[dict[str, Any]] = Field(default_factory=list)   # {estimate, se}
     interpretation: str = ""
+
+
+class GradeRow(BaseModel):
+    """One row of a GRADE Summary-of-Findings table (PRISMA item 22)."""
+    outcome: str = ""
+    n_studies: int = 0
+    n_participants: Optional[int] = None
+    design: str = ""                   # "randomized trials" | "observational studies"
+    risk_of_bias: str = "not serious"
+    inconsistency: str = "not serious"
+    indirectness: str = "not serious"
+    imprecision: str = "not serious"
+    other: str = "none"                # publication bias etc.
+    certainty: str = "moderate"        # high | moderate | low | very low
+    effect: str = ""                   # rendered pooled effect + 95% CI
+    importance: str = ""               # critical | important | not important
 
 
 class Synthesis(BaseModel):
     narrative: str = ""
     meta_analysis: Optional[MetaAnalysisResult] = None
+    meta_analyses: list[MetaAnalysisResult] = Field(default_factory=list)  # per outcome
     grade_certainty: str = ""          # high | moderate | low | very low
     grade_rationale: str = ""
+    grade_table: list[GradeRow] = Field(default_factory=list)              # SoF rows
     limitations: str = ""
 
 
@@ -229,7 +288,11 @@ class Synthesis(BaseModel):
 class PrismaFlow(BaseModel):
     records_identified: dict[str, int] = Field(default_factory=dict)  # per source
     records_total: int = 0
+    records_from_databases: int = 0
+    records_from_registers: int = 0
     duplicates_removed: int = 0
+    auto_excluded: int = 0                  # removed by automation tools before screening
+    removed_other_reasons: int = 0
     records_screened: int = 0
     records_excluded_screening: int = 0
     reports_sought: int = 0
@@ -237,6 +300,7 @@ class PrismaFlow(BaseModel):
     reports_assessed: int = 0
     reports_excluded: dict[str, int] = Field(default_factory=dict)    # reason → count
     studies_included: int = 0
+    reports_of_included: int = 0
 
 
 # ── The whole run ────────────────────────────────────────────────────────────
