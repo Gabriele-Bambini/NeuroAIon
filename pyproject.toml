@@ -25,6 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 viz = ["matplotlib>=3.8"]
 oa = ["pypdf>=4.0"]            # optional Unpaywall -> OA PDF full-text extraction
+pdf = ["reportlab>=4.0"]      # native PDF output without a LaTeX engine
 dev = ["pytest>=8.0"]
 
 [project.scripts]

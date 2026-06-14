@@ -221,6 +221,13 @@ def write_artifacts(out_dir: Path, state: ReviewState, prose: dict[str, str]) ->
     (out_dir / "review.html").write_text(
         html_report.build_html(state, prose), encoding="utf-8")
 
+    # Native PDF (no LaTeX needed) if reportlab is installed (neuroaion[pdf]).
+    try:
+        from . import pdf_report
+        pdf_report.build_pdf(state, prose, out_dir / "paper.pdf")
+    except Exception:  # noqa: BLE001 — optional dependency / best-effort
+        pass
+
     (out_dir / "state.json").write_text(state.model_dump_json(indent=2), encoding="utf-8")
     (out_dir / "prisma_flow.json").write_text(
         state.prisma.model_dump_json(indent=2), encoding="utf-8")

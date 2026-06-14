@@ -58,3 +58,25 @@ def test_funnel_tikz_renders_and_degrades():
     out = funnel_tikz(meta)
     assert "tikzpicture" in out and "Funnel plot" in out
     assert funnel_tikz(None) == ""             # graceful with no data
+
+
+def test_pdf_report_generates(tmp_path):
+    import pytest
+    pytest.importorskip("reportlab")
+    from neuroaion.pdf_report import build_pdf
+    from neuroaion.models import (MetaAnalysisResult, PrismaFlow, ReviewProtocol,
+                                  ReviewState, Synthesis)
+    st = ReviewState(run_id="t", protocol=ReviewProtocol(title="T", question="Q?"),
+                     synthesis=Synthesis(narrative="n", grade_certainty="low",
+                                         meta_analysis=MetaAnalysisResult(
+                                             measure="SMD", model="random", k_studies=2,
+                                             pooled_estimate=0.3, ci_lower=0.1, ci_upper=0.5,
+                                             funnel=[{"estimate": 0.3, "se": 0.1}],
+                                             forest=[{"study": "A", "estimate": 0.3,
+                                                      "ci_lower": 0.0, "ci_upper": 0.6,
+                                                      "weight_pct": 100.0}])),
+                     prisma=PrismaFlow(records_total=10, records_screened=8, studies_included=2))
+    out = build_pdf(st, {"abstract": "x"}, tmp_path / "paper.pdf")
+    data = out.read_bytes()
+    assert data[:5] == b"%PDF-"          # a real PDF
+    assert len(data) > 1000
