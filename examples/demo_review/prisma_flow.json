@@ -1,0 +1,19 @@
+{
+  "records_identified": {
+    "pubmed": 4,
+    "europepmc": 2,
+    "crossref": 2,
+    "openalex": 2
+  },
+  "records_total": 10,
+  "duplicates_removed": 2,
+  "records_screened": 8,
+  "records_excluded_screening": 2,
+  "reports_sought": 6,
+  "reports_not_retrieved": 0,
+  "reports_assessed": 6,
+  "reports_excluded": {
+    "No valid sham comparator": 1
+  },
+  "studies_included": 5
+}

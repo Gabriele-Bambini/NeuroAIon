@@ -1,0 +1,132 @@
+[
+  {
+    "uid": "doi:10.9999/demo.001",
+    "study_label": "Author1 A 2013",
+    "design": "randomized crossover",
+    "population": "Healthy adults",
+    "intervention": "Anodal tDCS L-DLPFC",
+    "comparator": "Sham",
+    "sample_size": 52,
+    "outcomes": [
+      "n-back accuracy"
+    ],
+    "effects": [
+      {
+        "outcome": "n-back accuracy",
+        "measure": "SMD",
+        "estimate": 0.42,
+        "ci_lower": null,
+        "ci_upper": null,
+        "se": 0.18,
+        "n_intervention": 26,
+        "n_comparator": 26
+      }
+    ],
+    "funding": "",
+    "notes": ""
+  },
+  {
+    "uid": "doi:10.9999/demo.002",
+    "study_label": "Author2 A 2015",
+    "design": "randomized crossover",
+    "population": "Healthy adults",
+    "intervention": "Anodal tDCS L-DLPFC",
+    "comparator": "Sham",
+    "sample_size": 64,
+    "outcomes": [
+      "n-back accuracy"
+    ],
+    "effects": [
+      {
+        "outcome": "n-back accuracy",
+        "measure": "SMD",
+        "estimate": 0.18,
+        "ci_lower": null,
+        "ci_upper": null,
+        "se": 0.15,
+        "n_intervention": 32,
+        "n_comparator": 32
+      }
+    ],
+    "funding": "",
+    "notes": ""
+  },
+  {
+    "uid": "doi:10.9999/demo.003",
+    "study_label": "Author3 A 2012",
+    "design": "randomized crossover",
+    "population": "Healthy adults",
+    "intervention": "Anodal tDCS L-DLPFC",
+    "comparator": "Sham",
+    "sample_size": 28,
+    "outcomes": [
+      "n-back accuracy"
+    ],
+    "effects": [
+      {
+        "outcome": "n-back accuracy",
+        "measure": "SMD",
+        "estimate": 0.55,
+        "ci_lower": null,
+        "ci_upper": null,
+        "se": 0.25,
+        "n_intervention": 14,
+        "n_comparator": 14
+      }
+    ],
+    "funding": "",
+    "notes": ""
+  },
+  {
+    "uid": "doi:10.9999/demo.004",
+    "study_label": "Author4 A 2018",
+    "design": "randomized crossover",
+    "population": "Healthy adults",
+    "intervention": "Anodal tDCS L-DLPFC",
+    "comparator": "Sham",
+    "sample_size": 40,
+    "outcomes": [
+      "n-back accuracy"
+    ],
+    "effects": [
+      {
+        "outcome": "n-back accuracy",
+        "measure": "SMD",
+        "estimate": 0.05,
+        "ci_lower": null,
+        "ci_upper": null,
+        "se": 0.2,
+        "n_intervention": 20,
+        "n_comparator": 20
+      }
+    ],
+    "funding": "",
+    "notes": ""
+  },
+  {
+    "uid": "doi:10.9999/demo.005",
+    "study_label": "Author5 A 2016",
+    "design": "randomized crossover",
+    "population": "Healthy adults",
+    "intervention": "Anodal tDCS L-DLPFC",
+    "comparator": "Sham",
+    "sample_size": 46,
+    "outcomes": [
+      "n-back accuracy"
+    ],
+    "effects": [
+      {
+        "outcome": "n-back accuracy",
+        "measure": "SMD",
+        "estimate": 0.31,
+        "ci_lower": null,
+        "ci_upper": null,
+        "se": 0.17,
+        "n_intervention": 23,
+        "n_comparator": 23
+      }
+    ],
+    "funding": "",
+    "notes": ""
+  }
+]
