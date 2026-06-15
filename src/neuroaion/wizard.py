@@ -34,6 +34,8 @@ def build_seed(
     sources: Optional[list[str]] = None, date_from: str = "2010-01-01",
     date_to: str = "auto", languages: Optional[list[str]] = None,
     keywords: Optional[list[list[str]]] = None, max_per_source: int = 200,
+    import_files: Optional[list[str]] = None, deep_pagination: bool = False,
+    snowball: bool = False, snowball_max: int = 200,
     effect_measure: str = "SMD", synthesis_model: str = "random",
     publication_bias: bool = True, rob_tool: str = "RoB2",
     citation_style: str = "vancouver", registration: str = "Not registered",
@@ -71,6 +73,10 @@ def build_seed(
             "date_from": date_from, "date_to": date_to,
             "languages": languages or ["en"], "max_records_per_source": max_per_source,
             "keywords": keywords or [],
+            # Recall amplifiers + subscription-database citation exports.
+            "import_files": import_files or [],
+            "deep_pagination": deep_pagination,
+            "snowball": snowball, "snowball_max": snowball_max,
         },
         "synthesis": {"effect_measure": effect_measure, "model": synthesis_model,
                       "min_studies_for_meta": 2, "publication_bias": publication_bias},
@@ -162,10 +168,25 @@ def interactive() -> tuple[dict, str, bool]:
     inclusion = _ask_lines("Inclusion criteria")
     exclusion = _ask_lines("Exclusion criteria")
 
-    sources = _multi("Databases to search", list(SOURCES),
+    sources = _multi("Databases to search (free APIs)", list(SOURCES),
                      list(frameworks.DEFAULT_SOURCES))
     date_from = _ask("\nSearch from (YYYY-MM-DD)", "2010-01-01")
     date_to = _ask("Search to (YYYY-MM-DD or 'auto')", "auto")
+
+    # Recall amplifiers.
+    print("\n── Recall (the make-or-break of a systematic review) ──")
+    print("For subscription databases (Scopus, Web of Science, Ovid, EBSCO …) run the")
+    print("search in your own browser, export the results (RIS/BibTeX/NBIB/EndNote/CSV),")
+    print("and list the files here — no credentials are ever used by the engine.")
+    import_files = _ask_lines("Citation-export files to import (paths)")
+    deep_pagination = _ask("Deep pagination — fetch beyond the first page? (y/N)",
+                           "N").lower().startswith("y")
+    snowball = _ask("Citation snowballing — chase references + cited-by? (y/N)",
+                    "N").lower().startswith("y")
+    snowball_max = 200
+    if snowball:
+        sm = _ask("  Max records to add via snowballing", "200")
+        snowball_max = int(sm) if sm.isdigit() else 200
 
     measure = _choose("Effect measure", ["SMD", "MD", "OR", "RR", "HR"], "SMD")
     model = _choose("Meta-analysis model", ["random", "fixed"], "random")
@@ -179,9 +200,10 @@ def interactive() -> tuple[dict, str, bool]:
     seed = build_seed(
         topic=topic, framework=fw, elements=elements, question=question,
         designs=designs, inclusion=inclusion, exclusion=exclusion, sources=sources,
-        date_from=date_from, date_to=date_to, effect_measure=measure,
-        synthesis_model=model, rob_tool=rob, citation_style=citation,
-        registration=registration, contact=contact,
+        date_from=date_from, date_to=date_to, import_files=import_files,
+        deep_pagination=deep_pagination, snowball=snowball, snowball_max=snowball_max,
+        effect_measure=measure, synthesis_model=model, rob_tool=rob,
+        citation_style=citation, registration=registration, contact=contact,
     )
     run_now = _ask("\nRun the review now? (y/N)", "N").lower().startswith("y")
     return seed, out_path, run_now

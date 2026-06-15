@@ -9,18 +9,50 @@ from ..models import Record
 from .base import clean, http_get
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+_PER_CALL = 200
+_MAX_PAGES = 25
 
 
 def search(query: str, retmax: int = 200, **_) -> list[Record]:
-    params = {"db": "pubmed", "term": query, "retmax": retmax, "retmode": "json"}
-    if config.NCBI_API_KEY:
-        params["api_key"] = config.NCBI_API_KEY
-    data = http_get(f"{EUTILS}/esearch.fcgi", params).json()
-    ids = data.get("esearchresult", {}).get("idlist", [])
+    per_call = min(retmax, _PER_CALL)
+    ids: list[str] = []
+    seen: set[str] = set()
+    retstart = 0
+    for _page in range(_MAX_PAGES):
+        params = {"db": "pubmed", "term": query, "retmax": per_call,
+                  "retstart": retstart, "retmode": "json"}
+        if config.NCBI_API_KEY:
+            params["api_key"] = config.NCBI_API_KEY
+        try:
+            data = http_get(f"{EUTILS}/esearch.fcgi", params).json()
+        except Exception:  # noqa: BLE001 — stop paging, return what we have
+            break
+        page_ids = data.get("esearchresult", {}).get("idlist", [])
+        if not page_ids:
+            break
+        new = [i for i in page_ids if i not in seen]
+        for i in new:
+            seen.add(i)
+        ids.extend(new)
+        if len(ids) >= retmax or len(page_ids) < per_call or not new:
+            break
+        retstart += per_call
+        time.sleep(0.34)  # respect 3 req/s without a key
+    ids = ids[:retmax]
     if not ids:
         return []
     time.sleep(0.34)  # respect 3 req/s without a key
-    return _fetch_details(ids)
+    # efetch caps the URL length; fetch details in batches.
+    out: list[Record] = []
+    for start in range(0, len(ids), _PER_CALL):
+        batch = ids[start:start + _PER_CALL]
+        try:
+            out.extend(_fetch_details(batch))
+        except Exception:  # noqa: BLE001
+            break
+        if start + _PER_CALL < len(ids):
+            time.sleep(0.34)
+    return out
 
 
 def _fetch_details(pmids: list[str]) -> list[Record]:

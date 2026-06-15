@@ -43,21 +43,48 @@ exclusion_criteria:
 # Search configuration (PRISMA item 6–7).
 search:
   # All sources are free / open (no paid keys). Available:
-  #   pubmed, europepmc, crossref, openalex, biorxiv,
+  #   pubmed, europepmc, crossref, openalex, biorxiv, core,
   #   clinicaltrials, doaj, semanticscholar, arxiv
   # arxiv + semanticscholar are included by default so CS / methods preprints
-  # (graph-ML, sheaf models, etc.) are covered.
+  # (graph-ML, sheaf models, etc.) are covered. 'core' (290M+ OA works) needs a
+  # free CORE_API_KEY env var for best results.
   sources: ["pubmed", "europepmc", "crossref", "openalex", "biorxiv",
-            "arxiv", "semanticscholar"]
+            "arxiv", "semanticscholar", "core"]
   date_from: "2010-01-01"
   date_to: "auto"            # 'auto' = today
   languages: ["en"]
+  # Per-source ceiling. With deep_pagination the connectors page to reach this
+  # number (otherwise they return roughly the first page).
   max_records_per_source: 200
-  # Seed keyword groups; SearchStrategist expands these into per-database Boolean queries.
+  # Seed keyword groups; SearchStrategist translates these into each database's
+  # native syntax (PubMed [tiab]/MeSH+dates, Europe PMC TITLE/ABSTRACT,
+  # Scopus TITLE-ABS-KEY, Web of Science TS=, arXiv abs:, …).
   keywords:
     - ["tDCS", "transcranial direct current stimulation", "anodal stimulation"]
     - ["working memory", "n-back", "digit span", "executive function"]
     - ["DLPFC", "dorsolateral prefrontal cortex"]
+
+  # ── Recall amplifiers — the single biggest driver of review quality ──────────
+  # Deep pagination: fetch beyond the first page, up to max_records_per_source
+  # (OpenAlex/Crossref cursors, Europe PMC cursorMark, PubMed retstart, S2 offset).
+  deep_pagination: true
+  # Citation snowballing: chase each identified study's reference list (backward)
+  # and the papers that cite it (forward) via OpenAlex/Crossref. PRISMA 2020
+  # counts these as records identified "via other methods".
+  snowball: true
+  snowball_max: 200          # cap on records added by snowballing
+
+  # ── Subscription databases (the legitimate way to use institutional access) ──
+  # The engine never handles your university credentials. Instead: run the search
+  # in your own authenticated browser on Scopus / Web of Science / Ovid / EBSCO /
+  # ScienceDirect, EXPORT the results (RIS / BibTeX / NBIB / EndNote XML / CSV),
+  # and list the downloaded files here. They are ingested into the normal pipeline
+  # (de-duplicated against the API results, then screened) — standard PRISMA
+  # practice, no terms of service violated.
+  import_files: []
+    # - "~/Desktop/exports/scopus_2024-06.ris"
+    # - "~/Desktop/exports/web_of_science.bib"
+    # - "~/Desktop/exports/ovid_medline.nbib"
 
 # Synthesis configuration (PRISMA item 13).
 synthesis:

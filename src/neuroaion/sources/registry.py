@@ -6,7 +6,7 @@ import random
 from typing import Callable
 
 from ..models import Record
-from . import (arxiv, biorxiv, clinicaltrials, crossref, doaj, europepmc,
+from . import (arxiv, biorxiv, clinicaltrials, core, crossref, doaj, europepmc,
                openalex, pubmed, semanticscholar)
 
 SOURCES: dict[str, Callable[..., list[Record]]] = {
@@ -19,6 +19,7 @@ SOURCES: dict[str, Callable[..., list[Record]]] = {
     "doaj": doaj.search,
     "semanticscholar": semanticscholar.search,
     "arxiv": arxiv.search,
+    "core": core.search,
 }
 
 

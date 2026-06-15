@@ -42,6 +42,14 @@ class SearchConfig(BaseModel):
     languages: list[str] = Field(default_factory=lambda: ["en"])
     max_records_per_source: int = 200
     keywords: list[list[str]] = Field(default_factory=list)
+    # Citation exports from subscription databases (Scopus, Web of Science, Ovid,
+    # EBSCO, …) that the reviewer downloaded from their own authenticated session —
+    # the legitimate way to use institutional access. RIS/BibTeX/NBIB/EndNote/CSV.
+    import_files: list[str] = Field(default_factory=list)
+    # Recall amplifiers (all credential-free).
+    deep_pagination: bool = False      # fetch beyond the first page, up to the cap
+    snowball: bool = False             # backward (references) + forward (cited-by) chasing
+    snowball_max: int = 200            # cap on records added by snowballing
 
 
 class SynthesisConfig(BaseModel):

@@ -109,6 +109,11 @@ class Orchestrator:
                  f"{len(protocol.search.sources)} sources.", state)
         self._checkpoint(out_dir, state)
 
+        # Citation snowballing (supplementary search via 'other methods', PRISMA 2020):
+        # chase references + cited-by of the identified set to lift recall.
+        if protocol.search.snowball and self.live_sources:
+            self._snowball(state)
+
         # Agent 3 — deduplication
         self.log("      · de-duplication …", state)
         state.unique_records, removed = DeduplicationAgent(self.provider, protocol).run(state.records)
@@ -213,7 +218,36 @@ class Orchestrator:
                 got = synthetic_records(q.source, q.query, n=min(cap, 30))
             self._log_fn(f"   · {q.source}: {len(got)} records")
             records.extend(got[:cap])
+
+        # Citation exports from subscription databases (the reviewer ran the search
+        # in their own authenticated browser session and downloaded the results).
+        import_files = state.protocol.search.import_files
+        if import_files:
+            from .sources import importers
+            imported = importers.import_paths(import_files)
+            self.log(f"   · imported {len(imported)} records from "
+                     f"{len(import_files)} citation export(s).", state)
+            records.extend(imported)
         return records
+
+    def _snowball(self, state: ReviewState) -> None:
+        """Forward (cited-by) + backward (references) citation chasing on the
+        identified set; new records are appended for the normal screening flow."""
+        try:
+            from .sources import snowball as _snow
+        except Exception:  # noqa: BLE001
+            return
+        seeds = [r for r in state.records if r.doi][:60]
+        if not seeds:
+            return
+        try:
+            found = _snow.snowball(seeds, max_total=state.protocol.search.snowball_max)
+        except Exception:  # noqa: BLE001
+            found = []
+        if found:
+            state.records.extend(found)
+            self.log(f"   · snowballing: +{len(found)} records via citation chasing "
+                     f"(references + cited-by).", state)
 
     def _screen(self, state: ReviewState) -> None:
         screener = TitleAbstractScreener(self.screen_provider, state.protocol)

@@ -17,6 +17,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Callable, Optional, Protocol
 
+from .. import config
 from ..models import Record
 from .base import http_get
 
@@ -107,30 +108,51 @@ def _epmc_id_by_doi(doi: str) -> tuple[str, str]:
     return "", ""
 
 
-def _unpaywall_pdf_text(doi: str, max_chars: int) -> str:
-    """If pypdf is installed, fetch the best OA PDF via Unpaywall and extract text.
+def unpaywall_oa(doi: str, email: str) -> Optional[dict]:
+    """Resolve a DOI to its best legal open-access location via Unpaywall.
 
-    Entirely optional and best-effort: needs ``pip install neuroaion[oa]`` and a
-    reachable PDF. Returns "" on any failure.
+    GET https://api.unpaywall.org/v2/{doi}?email={email}. Returns the
+    ``best_oa_location`` dict (carrying ``url_for_pdf``, ``url`` and ``version``)
+    or None when there is no OA copy or the lookup fails. Free, ToS-compliant
+    (an email is the only requirement).
     """
+    if not doi:
+        return None
+    try:
+        meta = http_get(UNPAYWALL.format(doi=doi), {"email": email}).json()
+    except Exception:  # noqa: BLE001 — best-effort, never fail the pipeline
+        return None
+    loc = meta.get("best_oa_location")
+    return loc or None
+
+
+def _unpaywall_pdf_text(doi: str, max_chars: int) -> tuple[str, str]:
+    """Fetch the best OA PDF via Unpaywall and extract text (if pypdf is present).
+
+    Best-effort: needs ``pip install neuroaion[oa]`` and a reachable PDF.
+    Returns ``(text, oa_url)``. ``text`` is "" when extraction is unavailable or
+    fails; ``oa_url`` is the OA URL discovered (so the caller can record it even
+    when no extractor is installed). Either may be "".
+    """
+    loc = unpaywall_oa(doi, config.CONTACT_EMAIL)
+    if not loc:
+        return "", ""
+    oa_url = loc.get("url_for_pdf") or loc.get("url") or ""
     try:
         import io
         from pypdf import PdfReader  # optional dependency
-    except Exception:  # noqa: BLE001
-        return ""
+    except Exception:  # noqa: BLE001 — extractor not installed; still report URL
+        return "", oa_url
+    pdf_url = loc.get("url_for_pdf") or loc.get("url")
+    if not pdf_url:
+        return "", oa_url
     try:
-        meta = http_get(UNPAYWALL.format(doi=doi),
-                        {"email": config.CONTACT_EMAIL}).json()
-        loc = meta.get("best_oa_location") or {}
-        pdf_url = loc.get("url_for_pdf") or loc.get("url")
-        if not pdf_url:
-            return ""
         raw = http_get(pdf_url, accept="application/pdf").content
         reader = PdfReader(io.BytesIO(raw))
         text = "\n".join((p.extract_text() or "") for p in reader.pages)
-        return text.strip()[:max_chars]
+        return text.strip()[:max_chars], oa_url
     except Exception:  # noqa: BLE001
-        return ""
+        return "", oa_url
 
 
 def retrieve(record: Record, *, max_chars: int = 40000) -> FullText:
@@ -156,11 +178,17 @@ def retrieve(record: Record, *, max_chars: int = 40000) -> FullText:
                                 source="pmc" if src == "PMC" else "preprint",
                                 pmcid=ext if src == "PMC" else "")
 
-    # 1c) Unpaywall → OA PDF text (optional; requires pypdf).
+    # 1c) Unpaywall → legal OA PDF/HTML (optional text via pypdf under [oa]).
     if record.doi:
-        body = _unpaywall_pdf_text(record.doi, max_chars)
+        body, oa_url = _unpaywall_pdf_text(record.doi, max_chars)
         if body:
             return FullText(text=body, retrieved=True, source="oa-pdf")
+        if oa_url:
+            # No extractor (or unreachable PDF): record the OA URL so downstream
+            # steps know a legal full text exists, falling through to the abstract
+            # for the working text.
+            return FullText(text=record.abstract or oa_url, retrieved=False,
+                            source="oa-url")
 
     # 2) Preprint full text (bioRxiv/medRxiv indexed in Europe PMC as PPR).
     if record.source == "biorxiv" and record.source_id:
