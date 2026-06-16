@@ -139,6 +139,23 @@ class Orchestrator:
 
     def _finish(self, state: ReviewState, out_dir: Path, protocol) -> ReviewState:
         out_dir.mkdir(parents=True, exist_ok=True)
+
+        # Professional PDF extraction: if the reviewer supplied a folder of
+        # full-text PDFs (downloaded via their own legitimate access), extract
+        # them (text + tables + references + statistics) and serve them as the
+        # working full text, falling back to OA/PMC for the rest.
+        fdir = protocol.search.fulltext_dir
+        if fdir:
+            try:
+                from .sources.pdf_extract import LocalPdfFullTextRetriever
+                local = LocalPdfFullTextRetriever(fdir, fallback=self.retriever)
+                matched = local.index(state.unique_records)
+                self.retriever = local
+                self.log(f"Local PDFs: extracted {len(local._docs)} file(s) from "
+                         f"{fdir}; matched {matched} to records.", state)
+            except Exception as e:  # noqa: BLE001
+                self.log(f"Local PDF extraction unavailable ({e}); using OA/PMC only.", state)
+
         # Agent 6 — full-text retrieval + eligibility
         if self.retriever is not None:
             self.log("[4/8] EligibilityAdjudicator · retrieving reports (PMC / Europe PMC) …", state)

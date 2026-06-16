@@ -50,6 +50,10 @@ class SearchConfig(BaseModel):
     deep_pagination: bool = False      # fetch beyond the first page, up to the cap
     snowball: bool = False             # backward (references) + forward (cited-by) chasing
     snowball_max: int = 200            # cap on records added by snowballing
+    # Folder of full-text PDFs the reviewer already downloaded (via their own
+    # legitimate access). Professionally extracted (text + tables + references +
+    # statistics) and used as the working full text for screening / extraction.
+    fulltext_dir: str = ""
 
 
 class SynthesisConfig(BaseModel):

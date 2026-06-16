@@ -86,6 +86,18 @@ search:
     # - "~/Desktop/exports/web_of_science.bib"
     # - "~/Desktop/exports/ovid_medline.nbib"
 
+  # ── Full-text PDFs (professional extraction) ─────────────────────────────────
+  # Drop the report PDFs you obtained through your own legitimate access into a
+  # folder and point here. Every PDF is parsed (reading-order text + IMRaD
+  # sections + tables + reference list + auto-harvested statistics) and matched to
+  # its record by DOI/title/filename, then used as the WORKING FULL TEXT for
+  # screening, data extraction and risk of bias — so the appraisal reads the whole
+  # report, not just the abstract. Open-access reports are fetched + extracted
+  # automatically (Unpaywall/PMC/arXiv); this is for the ones behind a paywall
+  # that you downloaded yourself. Needs:  pip install neuroaion[pdf-extract]
+  # (optionally set GROBID_URL to use a GROBID server for ML-grade parsing).
+  fulltext_dir: ""              # e.g. "~/Desktop/review_pdfs"
+
 # Synthesis configuration (PRISMA item 13).
 synthesis:
   effect_measure: "SMD"     # SMD | MD | OR | RR | HR

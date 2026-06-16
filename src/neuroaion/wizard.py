@@ -35,7 +35,7 @@ def build_seed(
     date_to: str = "auto", languages: Optional[list[str]] = None,
     keywords: Optional[list[list[str]]] = None, max_per_source: int = 200,
     import_files: Optional[list[str]] = None, deep_pagination: bool = False,
-    snowball: bool = False, snowball_max: int = 200,
+    snowball: bool = False, snowball_max: int = 200, fulltext_dir: str = "",
     effect_measure: str = "SMD", synthesis_model: str = "random",
     publication_bias: bool = True, rob_tool: str = "RoB2",
     citation_style: str = "vancouver", registration: str = "Not registered",
@@ -77,6 +77,7 @@ def build_seed(
             "import_files": import_files or [],
             "deep_pagination": deep_pagination,
             "snowball": snowball, "snowball_max": snowball_max,
+            "fulltext_dir": fulltext_dir,
         },
         "synthesis": {"effect_measure": effect_measure, "model": synthesis_model,
                       "min_studies_for_meta": 2, "publication_bias": publication_bias},
@@ -187,6 +188,10 @@ def interactive() -> tuple[dict, str, bool]:
     if snowball:
         sm = _ask("  Max records to add via snowballing", "200")
         snowball_max = int(sm) if sm.isdigit() else 200
+    print("\nDrop the full-text PDFs you obtained via your own access into a folder;")
+    print("they are parsed (text + tables + references + statistics) and used as the")
+    print("working full text for screening, extraction and risk of bias.")
+    fulltext_dir = _ask("Folder of full-text PDFs (optional)", "")
 
     measure = _choose("Effect measure", ["SMD", "MD", "OR", "RR", "HR"], "SMD")
     model = _choose("Meta-analysis model", ["random", "fixed"], "random")
@@ -202,6 +207,7 @@ def interactive() -> tuple[dict, str, bool]:
         designs=designs, inclusion=inclusion, exclusion=exclusion, sources=sources,
         date_from=date_from, date_to=date_to, import_files=import_files,
         deep_pagination=deep_pagination, snowball=snowball, snowball_max=snowball_max,
+        fulltext_dir=fulltext_dir,
         effect_measure=measure, synthesis_model=model, rob_tool=rob,
         citation_style=citation, registration=registration, contact=contact,
     )

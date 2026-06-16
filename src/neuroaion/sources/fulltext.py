@@ -138,16 +138,24 @@ def _unpaywall_pdf_text(doi: str, max_chars: int) -> tuple[str, str]:
     if not loc:
         return "", ""
     oa_url = loc.get("url_for_pdf") or loc.get("url") or ""
-    try:
-        import io
-        from pypdf import PdfReader  # optional dependency
-    except Exception:  # noqa: BLE001 — extractor not installed; still report URL
-        return "", oa_url
     pdf_url = loc.get("url_for_pdf") or loc.get("url")
     if not pdf_url:
         return "", oa_url
     try:
         raw = http_get(pdf_url, accept="application/pdf").content
+    except Exception:  # noqa: BLE001
+        return "", oa_url
+    # Prefer the professional PyMuPDF extractor; fall back to pypdf ([oa] extra).
+    try:
+        from .pdf_extract import extract_text_from_bytes
+        text = extract_text_from_bytes(raw, max_chars=max_chars)
+        if text:
+            return text, oa_url
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        import io
+        from pypdf import PdfReader  # optional dependency
         reader = PdfReader(io.BytesIO(raw))
         text = "\n".join((p.extract_text() or "") for p in reader.pages)
         return text.strip()[:max_chars], oa_url
