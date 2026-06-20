@@ -78,9 +78,26 @@ class ReviewProtocol(BaseModel):
     synthesis: SynthesisConfig = Field(default_factory=SynthesisConfig)
     risk_of_bias: RoBConfig = Field(default_factory=RoBConfig)
     registration: str = "Not registered"
+    authors: list[str] = Field(default_factory=list)
+    affiliation: str = ""
     authors_contact: str = ""
     prospero_export: bool = True
     citation_style: str = "vancouver"
+
+    def byline(self) -> str:
+        """Author line for the manuscript (falls back to the contact email)."""
+        names = ", ".join(self.authors) if self.authors else (self.authors_contact or "")
+        return names
+
+    def byline_full(self) -> str:
+        parts = []
+        if self.authors:
+            parts.append(", ".join(self.authors))
+        if self.affiliation:
+            parts.append(self.affiliation)
+        if self.authors_contact:
+            parts.append(self.authors_contact)
+        return " · ".join(parts)
 
     def criteria_block(self) -> str:
         """A compact, cache-friendly rendering of the eligibility contract."""

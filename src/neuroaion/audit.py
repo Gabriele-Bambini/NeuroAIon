@@ -79,10 +79,9 @@ def write_audit(out_dir: Path, state: ReviewState) -> list[Path]:
     rob_dist = Counter(a.overall for a in state.rob)
     excl = Counter(e.exclusion_reason or "Other" for e in state.eligibility
                    if e.full_text_retrieved and not e.eligible)
-    md = [f"# Audit report — run {state.run_id}", "",
-          f"Generated {datetime.utcnow().isoformat()}Z · engine NeuroAIon "
-          f"{__version__} · model `{state.model}`"
-          + (" (MOCK / illustrative)" if state.mock else ""), "",
+    md = [f"# Review process log — {state.protocol.title or state.run_id}", "",
+          f"Compiled {datetime.utcnow().isoformat()[:10]}. This log records the "
+          "study-selection, extraction and appraisal steps for auditability.", "",
           "## Process summary",
           f"- Records identified: **{state.prisma.records_total}** "
           f"(de-duplicated to {state.prisma.records_screened}; "
@@ -144,7 +143,6 @@ def write_manifest(out_dir: Path, state: ReviewState) -> Path:
         "engine": "NeuroAIon", "version": __version__,
         "run_id": state.run_id, "created_at": state.created_at,
         "generated_at": datetime.utcnow().isoformat() + "Z",
-        "model": state.model, "mock": state.mock,
         "title": p.title, "question": p.question,
         "parameters": {
             "sources": p.search.sources,

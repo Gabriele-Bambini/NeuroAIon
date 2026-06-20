@@ -208,29 +208,28 @@ def summary_of_findings_md(state: ReviewState) -> str:
 def declarations_md(state: ReviewState) -> str:
     """Journal end-matter declarations (CRediT, COI, funding, ethics, availability)."""
     p = state.protocol
+    authors = ", ".join(p.authors) if p.authors else (p.authors_contact or "The author(s)")
     return f"""# Declarations
 
 ## Author contributions (CRediT taxonomy)
-This review was produced by the NeuroAIon automated multi-agent engine. The
-contributor roles map to the pipeline agents as follows:
+{authors} contributed to all stages of this review:
 
-| CRediT role | Contributor (agent) |
+| CRediT role | Contributor |
 |---|---|
-| Conceptualization | ProtocolArchitect (review question & protocol) |
-| Methodology | ProtocolArchitect, SearchStrategist, EvidenceSynthesizer |
-| Investigation (search) | SearchStrategist, DeduplicationAgent |
-| Data curation (screening/extraction) | TitleAbstractScreener, DualScreenAdjudicator, FullTextEligibility, DataExtractor |
-| Formal analysis | EvidenceSynthesizer (meta-analysis), RiskOfBiasAssessor |
-| Visualization | Figure backend (forest, funnel, PRISMA, risk-of-bias) |
-| Writing — original draft | PRISMAReporter |
-| Writing — review & editing | PRISMAReporter, human corresponding author |
-| Supervision | Human corresponding author ({p.authors_contact or '—'}) |
+| Conceptualization | {authors} |
+| Methodology | {authors} |
+| Investigation (search & selection) | {authors} |
+| Data curation (screening & extraction) | {authors} |
+| Formal analysis (meta-analysis, risk of bias) | {authors} |
+| Visualization | {authors} |
+| Writing — original draft | {authors} |
+| Writing — review & editing | {authors} |
 
-The human corresponding author is responsible for verifying every extracted
-datum and the final manuscript prior to submission.
+All extracted data, risk-of-bias judgments and the final manuscript were
+verified by the author(s) prior to submission.
 
 ## Competing interests
-The authors declare no competing interests.
+The author(s) declare no competing interests.
 
 ## Funding
 {p.registration if 'fund' in (p.registration or '').lower() else 'No specific grant from any funding agency in the public, commercial, or not-for-profit sectors was received for this review.'}
@@ -244,11 +243,10 @@ no new human or animal data were collected.
 dossier{'; a PROSPERO-ready registration form is provided as `prospero_registration.md`.' if p.prospero_export else '.'}
 
 ## Data and code availability
-All data underlying this review (the full search corpus, screening decisions,
+All data underlying this review (the search records, screening decisions,
 extracted data, and risk-of-bias assessments) are provided in machine-readable
-form in this run directory (`state.json`, `sources/`, `documents/`,
-`extractions.json`). A SHA-256 integrity manifest (`manifest.json`) accompanies
-the dossier. The NeuroAIon engine source is available in the project repository.
+form alongside this dossier (`state.json`, `sources/`, `documents/`,
+`extractions.json`), with a SHA-256 integrity manifest (`manifest.json`).
 """
 
 
@@ -376,4 +374,10 @@ def write_documents(out_dir: Path, state: ReviewState) -> list[Path]:
     w("10_declarations.md", declarations_md(state))
     w("11_reporting_summary.md", reporting_summary_md(state))
     w("00_supplementary_index.md", supplementary_index_md(state))
+
+    # Completed risk-of-bias worksheets (one signalling-question form per study).
+    if state.rob:
+        from . import rob_forms
+        for path in rob_forms.write_completed_forms(d / "rob_worksheets", state.rob):
+            written.append(path)
     return written

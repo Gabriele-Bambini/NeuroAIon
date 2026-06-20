@@ -1,0 +1,10 @@
+domain,question_id,signalling_question,answer,supporting_text,domain_judgement,overall_judgement
+Selection,Is,the case definition / exposed cohort representative (star)?,,,,
+Selection,Selection,of controls / non-exposed cohort from the same population (star)?,,,,
+Selection,Ascertainment,of exposure / secure record (star)?,,,,
+Selection,Demonstration,that outcome of interest was not present at start (star)?,,,,
+Comparability,Comparability,of cohorts/cases on the basis of the design or analysis: controls for the most important factor (star)?,,,,
+Comparability,Comparability:,controls for any additional factor (star)?,,,,
+Outcome/Exposure,Assessment,of outcome / exposure: independent or record linkage (star)?,,,,
+Outcome/Exposure,Was,follow-up long enough for outcomes to occur (star)?,,,,
+Outcome/Exposure,Adequacy,of follow-up of cohorts / non-response rate comparable (star)?,,,,

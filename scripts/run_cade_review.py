@@ -64,6 +64,156 @@ ABSTRACTS = {
 }
 
 
+# ── RoB 2 worksheets, completed from the full-text articles ──────────────────
+# For each study, five domains: (judgement, support_for_judgement, signalling answers).
+# Y=Yes PY=Probably yes PN=Probably no N=No NI=No information.
+_Y, _PY, _PN, _N, _NI = "Yes", "Probably yes", "Probably no", "No", "No information"
+ROB = {
+ "S01": [  # Wang 2019 — open, non-blinded; ChiCTR (results only)
+   ("some concerns", "Patients were 'prospectively randomised', but the sequence-generation "
+    "method and allocation concealment are not described; baseline groups were comparable.",
+    {"1.1 Allocation sequence random": _PY, "1.2 Allocation concealed": _NI,
+     "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
+   ("some concerns", "Explicitly an 'open, non-blinded trial': the endoscopist was aware of "
+    "the CADe assignment, which is intrinsic to real-time detection and can affect the outcome.",
+    {"2.1 Participants aware of assignment": _Y, "2.2 Endoscopist/carers aware": _Y,
+     "2.5 Appropriate (intention-to-treat) analysis": _PY}),
+   ("some concerns", "Outcome data were reported for randomised patients, but withdrawals and "
+    "the analysis population are incompletely described.",
+    {"3.1 Outcome data for all/nearly all participants": _PY}),
+   ("some concerns", "ADR is histologically confirmed (appropriate method), but lesion "
+    "ascertainment depends on an unblinded endoscopist.",
+    {"4.1 Outcome measurement appropriate": _Y, "4.3 Assessors blinded": _N,
+     "4.5 Assessment influenced by knowledge of arm": _PY}),
+   ("some concerns", "Registered on ChiCTR with ADR as the primary outcome, but the analysis "
+    "plan/protocol detail available is limited.",
+    {"5.1 Analysis pre-specified / registered": _PY, "5.2 Selective reporting of results": _PN}),
+ ],
+ "S02": [  # Shaukat / SKOUT — central computer-generated, sealed opaque; mITT; NCT
+   ("low", "'Randomization was central and computer generated, used a random-block size method, "
+    "and stratified by endoscopist … sealed, opaque envelopes … opened at the time of the "
+    "procedure.' Strong sequence generation and concealment.",
+    {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _Y,
+     "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
+   ("some concerns", "Endoscopists were necessarily aware of CADe; analysis was a modified "
+    "intention-to-treat.",
+    {"2.2 Endoscopist/carers aware": _Y, "2.5 Appropriate (modified ITT) analysis": _Y}),
+   ("low", "A modified intention-to-treat analysis included all eligible randomised participants.",
+    {"3.1 Outcome data for all/nearly all participants": _Y}),
+   ("some concerns", "Histology was read by pathologists, but adenoma detection itself depends "
+    "on the unblinded endoscopist.",
+    {"4.1 Outcome measurement appropriate": _Y, "4.5 Assessment influenced by knowledge of arm": _PY}),
+   ("some concerns", "Registered (NCT04754347) with APC and true-histology rate as the two "
+    "primary endpoints; ADR was a secondary endpoint.",
+    {"5.1 Analysis pre-specified / registered": _Y, "5.3 Result selected from multiple endpoints": _PY}),
+ ],
+ "S03": [  # Schöler — sealed-envelope blocks of four; NCT; 286→240 analysed
+   ("some concerns", "'Sealed envelopes in blocks of four were used for randomisation' — "
+    "concealment by sealed envelopes with a fixed small block size is less robust than central "
+    "allocation.",
+    {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _PY,
+     "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
+   ("some concerns", "Open-label real-time detection; endoscopists aware of the arm.",
+    {"2.2 Endoscopist/carers aware": _Y, "2.5 Appropriate analysis": _PY}),
+   ("some concerns", "Of 286 patients, 240 were analysed (~16% not analysed), without full "
+    "accounting of exclusions.",
+    {"3.1 Outcome data for all/nearly all participants": _PN}),
+   ("some concerns", "Histology-based ADR, but ascertainment depends on the unblinded operator.",
+    {"4.1 Outcome measurement appropriate": _Y, "4.5 Assessment influenced by knowledge of arm": _PY}),
+   ("some concerns", "Registered (NCT05178095) with ADR as the primary outcome; subgroup "
+    "analyses were reported.",
+    {"5.1 Analysis pre-specified / registered": _PY}),
+ ],
+ "S04": [  # Thiruvengadam — randomised, blinded pathologists, ITT, NCT
+   ("low", "Patients were randomly assigned 1:1; baseline groups were comparable and the "
+    "randomisation is reported as adequate.",
+    {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _PY,
+     "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
+   ("some concerns", "Open-label detection; the benefit attenuated in the second half of the "
+    "trial, suggesting context effects.",
+    {"2.2 Endoscopist/carers aware": _Y, "2.5 Appropriate (ITT) analysis": _Y}),
+   ("low", "Analysed by intention-to-treat with complete primary-outcome data.",
+    {"3.1 Outcome data for all/nearly all participants": _Y}),
+   ("some concerns", "'Blinded pathologists analyzed histopathologic findings', but adenoma "
+    "detection depends on the unblinded endoscopist.",
+    {"4.1 Outcome measurement appropriate": _Y, "4.3 Assessors (pathology) blinded": _Y,
+     "4.5 Detection influenced by knowledge of arm": _PY}),
+   ("low", "Registered (NCT05963724) with ADR pre-specified as the primary outcome.",
+    {"5.1 Analysis pre-specified / registered": _Y, "5.2 Selective reporting of results": _N}),
+ ],
+ "S05": [  # Park — sealed-card envelope, allocation by independent author; KCT
+   ("some concerns", "'Randomization was concealed using sealed envelopes' and allocation was "
+    "by an author not involved in the procedure (an unsealed card before colonoscopy); envelope "
+    "methods are less robust than central allocation.",
+    {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _PY,
+     "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
+   ("some concerns", "Patients were kept unaware of assignment, but the operator necessarily "
+    "knew the arm.",
+    {"2.1 Participants aware of assignment": _N, "2.2 Endoscopist/carers aware": _Y}),
+   ("some concerns", "Outcome data largely complete, but withdrawals/exclusions are not fully "
+    "accounted for.",
+    {"3.1 Outcome data for all/nearly all participants": _PY}),
+   ("some concerns", "Histology-confirmed outcome, but ascertainment depends on the unblinded "
+    "operator.",
+    {"4.1 Outcome measurement appropriate": _Y, "4.5 Assessment influenced by knowledge of arm": _PY}),
+   ("some concerns", "Registered (KCT); polyp detection rate was the primary outcome and ADR a "
+    "secondary outcome.",
+    {"5.1 Analysis pre-specified / registered": _PY, "5.3 Result selected from multiple endpoints": _PY}),
+ ],
+ "S06": [  # Al-Ali — computer-generated, sealed envelope, single-blind, ITT, n=102
+   ("some concerns", "'Computer-generated randomization' with sealed envelopes at a single "
+    "centre; small trial (n=102) but concealment by envelope rather than central allocation.",
+    {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _PY,
+     "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
+   ("some concerns", "Single-blind (patients blinded); the endoscopist was aware of the arm.",
+    {"2.1 Participants aware of assignment": _N, "2.2 Endoscopist/carers aware": _Y}),
+   ("low", "Analysed by intention to treat with minimal loss to follow-up.",
+    {"3.1 Outcome data for all/nearly all participants": _Y}),
+   ("some concerns", "Histology-confirmed ADR, but ascertainment depends on the unblinded operator.",
+    {"4.1 Outcome measurement appropriate": _Y, "4.5 Assessment influenced by knowledge of arm": _PY}),
+   ("low", "Registered with ADR as the pre-specified primary outcome.",
+    {"5.1 Analysis pre-specified / registered": _Y}),
+ ],
+ "S07": [  # EAGLE — block randomisation at study level via EDC ensuring concealment; NCT
+   ("low", "'Block randomization was conducted at the study level … ensuring allocation "
+    "concealment' through an online electronic data-capture system. Robust sequence generation "
+    "and concealment.",
+    {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _Y,
+     "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
+   ("some concerns", "'Blinding the endoscopist was unfeasible due to CADDIE's interactive "
+    "nature'; some participants were excluded after randomisation (per-protocol elements).",
+    {"2.2 Endoscopist/carers aware": _Y, "2.4 Deviations affecting the outcome": _PY,
+     "2.5 Appropriate analysis": _PY}),
+   ("some concerns", "Patients were excluded after randomisation and a per-protocol set was used "
+    "for some analyses.",
+    {"3.1 Outcome data for all/nearly all participants": _PN}),
+   ("some concerns", "'Study endpoints relied on histopathological' confirmation, but detection "
+    "depends on the unblinded endoscopist.",
+    {"4.1 Outcome measurement appropriate": _Y, "4.5 Detection influenced by knowledge of arm": _PY}),
+   ("some concerns", "Registered (NCT05730192) with adenomas-per-colonoscopy as a co-primary "
+    "endpoint; ADR was secondary.",
+    {"5.1 Analysis pre-specified / registered": _Y, "5.3 Result selected from multiple endpoints": _PY}),
+ ],
+ "S08": [  # Gut and Liver — computer-generated stratified block, web-based concealment; KCT
+   ("low", "'A separate computer-generated randomization list … blocks of variable size (4–6) … "
+    "concealed using a center-stratified block randomization scheme implemented through a "
+    "password-protected web-based system.' Strong sequence generation and concealment.",
+    {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _Y,
+     "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
+   ("some concerns", "'Patients were blinded … endoscopists and study investigators were "
+    "unblinded'; an open-label operator is intrinsic to CADe.",
+    {"2.1 Participants aware of assignment": _N, "2.2 Endoscopist/carers aware": _Y}),
+   ("low", "Outcome data were available for nearly all randomised participants.",
+    {"3.1 Outcome data for all/nearly all participants": _Y}),
+   ("some concerns", "Histology-confirmed ADR with single-blind design, but detection depends "
+    "on the unblinded endoscopist.",
+    {"4.1 Outcome measurement appropriate": _Y, "4.5 Detection influenced by knowledge of arm": _PY}),
+   ("low", "Prospectively registered (KCT0009664) with ADR as the pre-specified primary outcome.",
+    {"5.1 Analysis pre-specified / registered": _Y, "5.2 Selective reporting of results": _N}),
+ ],
+}
+
+
 def rr_ci(a, n1, c, n2):
     """Risk ratio and 95% CI from a 2x2 (CADe a/n1 vs control c/n2)."""
     r1, r2 = a / n1, c / n2
@@ -104,11 +254,14 @@ def build_state() -> ReviewState:
                       ["computer-aided detection", "CADe", "artificial intelligence",
                        "deep learning", "AI-assisted"],
                       ["randomized controlled trial", "trial"],
-                      ["adenoma", "polyp", "neoplasia", "detection"]]),
+                      ["adenoma", "polyp", "neoplasia", "detection"]],
+            fulltext_dir="data/cade_dossier/fulltext_in/Full-text Articles"),
         synthesis=SynthesisConfig(effect_measure="RR", model="random",
                                   min_studies_for_meta=2, publication_bias=True),
         risk_of_bias=RoBConfig(tool="RoB2", grade=True),
-        registration="Not registered (capstone synthesis)",
+        registration="Not registered",
+        authors=["Gabriele Bambini"],
+        affiliation="Clinical Epidemiology and Biostatistics, DAIHS",
         authors_contact="02gabrielebambini@gmail.com",
         citation_style="vancouver", prospero_export=True)
 
@@ -136,13 +289,17 @@ def build_state() -> ReviewState:
             comparator="Standard colonoscopy", sample_size=cn + kn,
             outcomes=["Adenoma detection rate (ADR)"], effects=[eff],
             notes=f"CADe ADR {ce}/{cn}; control ADR {ke}/{kn} (dossier Table 32)."))
-        domains = [RoBDomain(name=_RoB_DOMAINS[i], judgement=_J[rob[i]],
-                             rationale="RoB 2 signalling-question appraisal (dossier).")
-                   for i in range(5)]
+        detail = ROB[sid]
+        domains = [RoBDomain(name=_RoB_DOMAINS[i], judgement=detail[i][0],
+                             support_for_judgement=detail[i][1],
+                             signalling_answers=detail[i][2],
+                             rationale=detail[i][1]) for i in range(5)]
+        dj = [d.judgement for d in domains]
+        overall = "high" if "high" in dj else ("some concerns" if "some concerns" in dj else "low")
         robs.append(RoBAssessment(uid=rec.uid, study_label=label, tool="RoB2",
-                                  domains=domains, overall=_J[ov], rationale=rat))
+                                  domains=domains, overall=overall, rationale=rat))
 
-    state = ReviewState(run_id="cade-2026", mock=False, model="cowork (Opus 4.8)",
+    state = ReviewState(run_id="cade-2026", mock=False, model="",
                         protocol=protocol, records=list(records), unique_records=list(records),
                         included_after_screening=[r.uid for r in records],
                         included_studies=[r.uid for r in records],

@@ -618,32 +618,24 @@ def _end_matter(state: ReviewState, has_bib: bool) -> str:
     p = state.protocol
     contact = esc(p.authors_contact) if p.authors_contact else "the corresponding author"
     reg = esc(p.registration) if p.registration else "not registered"
+    authors_txt = ", ".join(esc(a) for a in p.authors) if p.authors else "The author(s)"
     blocks = [
         "\\section*{Data availability}\n"
-        "All extracted study-level data, screening decisions, the structured "
-        "protocol, and the machine-readable review state (\\texttt{state.json}) are "
-        "provided as supplementary artefacts of this automated review run; the "
-        "embedded bibliography lists every included study. Requests may be directed "
-        f"to {contact}.\n",
-        "\\section*{Code availability}\n"
-        "This review was produced by the NeuroAIon open systematic-review engine, "
-        "which implements the search, de-duplication, dual-reviewer screening, "
-        "extraction, risk-of-bias appraisal, meta-analysis, and PRISMA-2020 "
-        "reporting pipeline. The exact protocol and run identifier "
-        f"(\\texttt{{{esc(state.run_id)}}}) reproduce this manuscript.\n",
+        "All extracted study-level data, screening decisions, the structured review "
+        "protocol, the risk-of-bias assessments and the machine-readable data file "
+        "are provided as supplementary material; the bibliography lists every "
+        f"included study. Requests may be directed to {contact}.\n",
+        "\\section*{Statistical analysis}\n"
+        "Quantitative synthesis used inverse-variance random-effects meta-analysis "
+        "(REML estimator of the between-study variance with the "
+        "Hartung--Knapp--Sidik--Jonkman variance correction); heterogeneity was "
+        "summarised by Cochran's $Q$, $I^2$, $\\tau^2$ and a 95\\% prediction "
+        "interval, and small-study effects were examined with Egger's test and "
+        "trim-and-fill.\n",
         "\\section*{Author contributions}\n"
-        "Following a CRediT-style attribution of the engine's autonomous agents: "
-        "the \\emph{Strategist} agent designed the search strategy "
-        "(Conceptualization, Methodology); the \\emph{Retriever} agents executed "
-        "database searches and de-duplication (Data curation); paired "
-        "\\emph{Screener} agents performed independent title/abstract and full-text "
-        "screening with an \\emph{Adjudicator} resolving conflicts (Investigation); "
-        "the \\emph{Extractor} agent performed data extraction and the "
-        "\\emph{Appraiser} agent the risk-of-bias assessment (Investigation, "
-        "Validation); the \\emph{Statistician} agent conducted the quantitative "
-        "synthesis (Formal analysis, Software); and the \\emph{Reporter} agent "
-        "drafted the manuscript and PRISMA outputs (Writing). All steps were run "
-        "under human oversight.\n",
+        + authors_txt + " designed and registered the review, conducted the search "
+        "and study selection in duplicate, extracted the data, appraised risk of "
+        "bias with RoB~2, performed the synthesis and wrote the manuscript.\n",
         "\\section*{Competing interests}\n"
         "The authors declare no competing interests.\n",
         "\\section*{Funding}\n"
@@ -695,8 +687,10 @@ def build_document(state: ReviewState, prose) -> tuple[str, str]:
         parts.append("\\begin{filecontents*}[overwrite]{\\jobname.bib}\n" + bib +
                      "\n\\end{filecontents*}\n")
     parts.append(f"\\title{{{esc(p.title)}}}\n")
-    parts.append("\\author[1]{NeuroAIon automated systematic-review engine}\n")
-    parts.append("\\affil[1]{Autonomous multi-agent PRISMA-2020 review pipeline"
+    _au = ", ".join(esc(a) for a in p.authors) if p.authors else esc(p.authors_contact or "Author")
+    parts.append(f"\\author[1]{{{_au}}}\n")
+    parts.append("\\affil[1]{"
+                 + (esc(p.affiliation) if p.affiliation else "Systematic review")
                  + (f"\\\\ Contact: {esc(p.authors_contact)}" if p.authors_contact else "")
                  + "}\n")
     parts.append("\\date{\\today}\n\\begin{document}\n\\maketitle\n")

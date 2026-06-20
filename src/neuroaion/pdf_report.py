@@ -378,14 +378,14 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7)]))
 
     SEP = "&#160;&#160;&#183;&#160;&#160;"   # spaced middot separator
+    _authors = ", ".join(p.authors) if p.authors else (p.authors_contact or "")
     title_block = [
         _para(p.title, S["title"]),
-        _rich("<b>NeuroAIon</b> — automated multi-agent systematic-review engine"
-              + (f"{SEP}{html.escape(p.authors_contact)}" if p.authors_contact else ""),
+        _rich((f"<b>{html.escape(_authors)}</b>" if _authors else "")
+              + (f"{SEP}{html.escape(p.affiliation)}" if p.affiliation else ""),
               S["authors"]),
-        _rich("<b>PRISMA 2020</b>"
-              + (f"{SEP}{html.escape(p.registration)}" if p.registration else "")
-              + (f"{SEP}<b>DEMONSTRATION (illustrative data)</b>" if state.mock else ""),
+        _rich("Systematic review and meta-analysis following PRISMA 2020"
+              + (f"{SEP}{html.escape(p.registration)}" if p.registration else ""),
               S["affil"]),
         abs_box,
         _rich(f"<b>Keywords</b>&#160;&#160;{html.escape(_keywords(state))}", S["kw"]),
@@ -413,8 +413,7 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         canvas.saveState()
         canvas.setFont("Helvetica", 7)
         canvas.setFillColor(colors.HexColor(MUTED))
-        canvas.drawString(ml, H - mt + 9, short if doc.page > 1 else
-                          "NeuroAIon · automated systematic review")
+        canvas.drawString(ml, H - mt + 9, short)
         canvas.drawRightString(W - mr, H - mt + 9, f"{doc.page}")
         canvas.setStrokeColor(colors.HexColor(RULE))
         canvas.setLineWidth(0.5)
@@ -422,7 +421,7 @@ def build_pdf(state: ReviewState, prose: dict[str, str], path: str | Path,
         canvas.restoreState()
 
     doc = BaseDocTemplate(str(path), pagesize=A4, title=p.title,
-                          author="NeuroAIon", leftMargin=ml, rightMargin=mr,
+                          author=_authors or "", leftMargin=ml, rightMargin=mr,
                           topMargin=mt, bottomMargin=mb)
     doc.addPageTemplates([
         PageTemplate(id="first", frames=[top, fc_l, fc_r], onPage=header),

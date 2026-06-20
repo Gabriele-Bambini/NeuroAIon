@@ -1,0 +1,12 @@
+domain,question_id,signalling_question,answer,supporting_text,domain_judgement,overall_judgement
+Patient selection,Was,a consecutive or random sample of patients enrolled?,,,,
+Patient selection,Was,a case-control design avoided?,,,,
+Patient selection,Did,the study avoid inappropriate exclusions?,,,,
+Index test,Were,the index test results interpreted without knowledge of the results of the reference standard?,,,,
+Index test,If,"a threshold was used, was it pre-specified?",,,,
+Reference standard,Is,the reference standard likely to correctly classify the target condition?,,,,
+Reference standard,Were,the reference-standard results interpreted without knowledge of the results of the index test?,,,,
+Flow and timing,Was,there an appropriate interval between index test and reference standard?,,,,
+Flow and timing,Did,all patients receive a reference standard?,,,,
+Flow and timing,Did,all patients receive the same reference standard?,,,,
+Flow and timing,Were,all patients included in the analysis?,,,,
