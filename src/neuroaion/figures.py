@@ -217,7 +217,10 @@ def build_funnel_figure(meta: MetaAnalysisResult):
     ax.set_xlim(null - span, null + span)
     ax.set_ylim(se_max, 0)
     if ratio:
-        ax.set_xticklabels([f"{math.exp(t):.2g}" for t in ax.get_xticks()])
+        import matplotlib.ticker as mticker
+        ticks = [t for t in ax.get_xticks() if null - span <= t <= null + span]
+        ax.xaxis.set_major_locator(mticker.FixedLocator(ticks))
+        ax.set_xticklabels([f"{math.exp(t):.2g}" for t in ticks])
     ax.set_xlabel(f"Effect size ({meta.measure})", fontsize=8.5)
     ax.set_ylabel("Standard error", fontsize=8.5)
     ax.tick_params(labelsize=7.5)

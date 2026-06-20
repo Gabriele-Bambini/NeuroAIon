@@ -1,0 +1,8 @@
+Computer-Aided Detection Improves Adenomas per Colonoscopy for Screening and Surveillance Colonoscopy: A Randomized Trial
+
+Shaukat 2022 (SKOUT) | Gastroenterology 163(3):732-741 (2022)
+PMID: 35643173 | DOI: https://doi.org/10.1053/j.gastro.2022.05.028
+PMC full text: (not open access — paywalled)
+
+Abstract
+Multicentre RCT (SKOUT): CADe increased adenomas per colonoscopy (1.05 vs 0.83, p=.002) without raising non-neoplastic resections; ADR 47.8% vs 43.9% (p=.065).

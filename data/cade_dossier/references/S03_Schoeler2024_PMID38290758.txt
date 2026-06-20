@@ -1,0 +1,8 @@
+Impact of AI-aided colonoscopy in clinical practice: a prospective randomised controlled trial
+
+Schoeler 2024 | BMJ Open Gastroenterol 11(1):e001247 (2024)
+PMID: 38290758 | DOI: https://doi.org/10.1136/bmjgast-2023-001247
+PMC full text: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10870789/
+
+Abstract
+Swedish RCT: ADR did not improve with AI (41% vs 43%); sessile-serrated-lesion detection was higher with AI assistance.

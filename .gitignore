@@ -27,3 +27,9 @@ runs/*
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# CADe review generated artifacts (reproducible via scripts/run_cade_review.py)
+data/cade_dossier/full_text.txt
+data/cade_dossier/review/
+data/cade_dossier/review_pdfs/
+data/cade_review_package.zip

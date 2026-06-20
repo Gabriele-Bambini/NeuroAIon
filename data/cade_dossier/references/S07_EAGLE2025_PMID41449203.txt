@@ -1,0 +1,8 @@
+A novel cloud-based artificial intelligence for real-time detection of colorectal neoplasia - a randomized controlled trial (EAGLE)
+
+EAGLE 2025 | NPJ Digit Med 9(1):84 (2025)
+PMID: 41449203 | DOI: https://doi.org/10.1038/s41746-025-02270-1
+PMC full text: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12852673/
+
+Abstract
+European multicentre cloud-based CADe RCT (EAGLE): APC 0.82 vs 0.62 (ratio 1.33); ADR 43.2% vs 35.9%; large-polyp and SSL detection improved.

@@ -1,0 +1,8 @@
+A prospective multicenter randomized controlled trial on artificial intelligence assisted colonoscopy for enhanced polyp detection
+
+Park 2024 | Sci Rep 14(1):25453 (2024)
+PMID: 39455850 | DOI: https://doi.org/10.1038/s41598-024-77079-1
+PMC full text: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11512038/
+
+Abstract
+Multicentre RCT (RetinaNet program): AI assistance significantly increased PDR and ADR; OR ~1.50 for polyp detection.

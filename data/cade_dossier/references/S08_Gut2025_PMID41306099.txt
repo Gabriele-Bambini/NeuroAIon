@@ -1,0 +1,8 @@
+Clinical Efficacy of Real-Time Artificial Intelligence-Assisted Colonoscopy in Colorectal Polyp Detection: A Prospective Multicenter Randomized Controlled Trial
+
+Gut and Liver 2025 | Gut Liver 20(1):97-106 (2025)
+PMID: 41306099 | DOI: https://doi.org/10.5009/gnl250369
+PMC full text: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12800677/
+
+Abstract
+Korean multicentre RCT: CADe significantly increased ADR (52.3% vs 36.1%, p<0.001) and PDR; strongest independent predictor of adenoma detection.

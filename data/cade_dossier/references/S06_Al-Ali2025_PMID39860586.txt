@@ -1,0 +1,8 @@
+Artificial Intelligence for Adenoma and Polyp Detection During Screening and Surveillance Colonoscopy: A Randomized-Controlled Trial
+
+Al-Ali 2025 | J Clin Med 14(2):581 (2025)
+PMID: 39860586 | DOI: https://doi.org/10.3390/jcm14020581
+PMC full text: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11766411/
+
+Abstract
+Kuwaiti RCT (n=102): ADR non-significantly higher with CADe (47.1% vs 37.3%, p=0.3); PDR significantly higher.

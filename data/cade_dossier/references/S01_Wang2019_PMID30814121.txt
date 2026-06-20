@@ -1,0 +1,8 @@
+Real-time automatic detection system increases colonoscopic polyp and adenoma detection rates: a prospective randomised controlled study
+
+Wang 2019 | Gut 68(10):1813-1819 (2019)
+PMID: 30814121 | DOI: https://doi.org/10.1136/gutjnl-2018-317500
+PMC full text: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6839720/
+
+Abstract
+In an open, non-blinded RCT, real-time automatic polyp detection significantly increased ADR (29.1% vs 20.3%, p<0.001) and adenomas per patient, driven by diminutive adenomas.

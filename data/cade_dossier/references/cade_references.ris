@@ -1,0 +1,119 @@
+TY  - JOUR
+TI  - Real-time automatic detection system increases colonoscopic polyp and adenoma detection rates: a prospective randomised controlled study
+AU  - Wang
+PY  - 2019
+JO  - Gut
+VL  - 68
+IS  - 10
+SP  - 1813-1819
+DO  - 10.1136/gutjnl-2018-317500
+AN  - 30814121
+DB  - PubMed
+UR  - https://doi.org/10.1136/gutjnl-2018-317500
+AB  - In an open, non-blinded RCT, real-time automatic polyp detection significantly increased ADR (29.1% vs 20.3%, p<0.001) and adenomas per patient, driven by diminutive adenomas.
+ER  -
+
+TY  - JOUR
+TI  - Computer-Aided Detection Improves Adenomas per Colonoscopy for Screening and Surveillance Colonoscopy: A Randomized Trial
+AU  - Shaukat
+PY  - 2022
+JO  - Gastroenterology
+VL  - 163
+IS  - 3
+SP  - 732-741
+DO  - 10.1053/j.gastro.2022.05.028
+AN  - 35643173
+DB  - PubMed
+UR  - https://doi.org/10.1053/j.gastro.2022.05.028
+AB  - Multicentre RCT (SKOUT): CADe increased adenomas per colonoscopy (1.05 vs 0.83, p=.002) without raising non-neoplastic resections; ADR 47.8% vs 43.9% (p=.065).
+ER  -
+
+TY  - JOUR
+TI  - Impact of AI-aided colonoscopy in clinical practice: a prospective randomised controlled trial
+AU  - Schoeler
+PY  - 2024
+JO  - BMJ Open Gastroenterol
+VL  - 11
+IS  - 1
+SP  - e001247
+DO  - 10.1136/bmjgast-2023-001247
+AN  - 38290758
+DB  - PubMed
+UR  - https://doi.org/10.1136/bmjgast-2023-001247
+AB  - Swedish RCT: ADR did not improve with AI (41% vs 43%); sessile-serrated-lesion detection was higher with AI assistance.
+ER  -
+
+TY  - JOUR
+TI  - The Efficacy of Real-time Computer-aided Detection of Colonic Neoplasia in Community Practice: A Pragmatic Randomized Controlled Trial
+AU  - Thiruvengadam
+PY  - 2024
+JO  - Clin Gastroenterol Hepatol
+VL  - 22
+IS  - 11
+SP  - 2221-2230
+DO  - 10.1016/j.cgh.2024.02.021
+AN  - 38437999
+DB  - PubMed
+UR  - https://doi.org/10.1016/j.cgh.2024.02.021
+AB  - Single-centre pragmatic community RCT: CADe modestly improved ADR (42.5% vs 34.4%, p=.005) and APC, driven by <5 mm adenomas.
+ER  -
+
+TY  - JOUR
+TI  - A prospective multicenter randomized controlled trial on artificial intelligence assisted colonoscopy for enhanced polyp detection
+AU  - Park
+PY  - 2024
+JO  - Sci Rep
+VL  - 14
+IS  - 1
+SP  - 25453
+DO  - 10.1038/s41598-024-77079-1
+AN  - 39455850
+DB  - PubMed
+UR  - https://doi.org/10.1038/s41598-024-77079-1
+AB  - Multicentre RCT (RetinaNet program): AI assistance significantly increased PDR and ADR; OR ~1.50 for polyp detection.
+ER  -
+
+TY  - JOUR
+TI  - Artificial Intelligence for Adenoma and Polyp Detection During Screening and Surveillance Colonoscopy: A Randomized-Controlled Trial
+AU  - Al-Ali
+PY  - 2025
+JO  - J Clin Med
+VL  - 14
+IS  - 2
+SP  - 581
+DO  - 10.3390/jcm14020581
+AN  - 39860586
+DB  - PubMed
+UR  - https://doi.org/10.3390/jcm14020581
+AB  - Kuwaiti RCT (n=102): ADR non-significantly higher with CADe (47.1% vs 37.3%, p=0.3); PDR significantly higher.
+ER  -
+
+TY  - JOUR
+TI  - A novel cloud-based artificial intelligence for real-time detection of colorectal neoplasia - a randomized controlled trial (EAGLE)
+AU  - EAGLE
+PY  - 2025
+JO  - NPJ Digit Med
+VL  - 9
+IS  - 1
+SP  - 84
+DO  - 10.1038/s41746-025-02270-1
+AN  - 41449203
+DB  - PubMed
+UR  - https://doi.org/10.1038/s41746-025-02270-1
+AB  - European multicentre cloud-based CADe RCT (EAGLE): APC 0.82 vs 0.62 (ratio 1.33); ADR 43.2% vs 35.9%; large-polyp and SSL detection improved.
+ER  -
+
+TY  - JOUR
+TI  - Clinical Efficacy of Real-Time Artificial Intelligence-Assisted Colonoscopy in Colorectal Polyp Detection: A Prospective Multicenter Randomized Controlled Trial
+AU  - Gut
+PY  - 2025
+JO  - Gut Liver
+VL  - 20
+IS  - 1
+SP  - 97-106
+DO  - 10.5009/gnl250369
+AN  - 41306099
+DB  - PubMed
+UR  - https://doi.org/10.5009/gnl250369
+AB  - Korean multicentre RCT: CADe significantly increased ADR (52.3% vs 36.1%, p<0.001) and PDR; strongest independent predictor of adenoma detection.
+ER  -
