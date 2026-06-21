@@ -1,0 +1,8 @@
+Study on detection rate of polyps and adenomas in artificial-intelligence-aided colonoscopy
+
+Liu 2020 | Saudi J Gastroenterol 26(1):13-19 (2020)
+PMID: 31898644 | DOI: https://doi.org/10.4103/sjg.SJG_377_19
+PMC full text: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7045775/
+
+Abstract
+Single-centre Chinese RCT (deep-learning CADe), primary outcome ADR: CADe increased ADR (39.1% vs 23.9%, OR 1.64, p<0.001) in 1026 patients (508 CADe, 518 control).

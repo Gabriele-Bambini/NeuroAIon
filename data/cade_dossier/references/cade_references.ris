@@ -119,31 +119,31 @@ AB  - Korean multicentre RCT: CADe significantly increased ADR (52.3% vs 36.1%, 
 ER  -
 
 TY  - JOUR
-TI  - Efficacy of Real-Time Computer-Aided Detection of Colorectal Neoplasia in a Randomized Trial
-AU  - Repici
+TI  - Study on detection rate of polyps and adenomas in artificial-intelligence-aided colonoscopy
+AU  - Liu
 PY  - 2020
-JO  - Gastroenterology
-VL  - 159
-IS  - 2
-SP  - 512-520
-DO  - 10.1053/j.gastro.2020.04.062
-AN  - 32371116
+JO  - Saudi J Gastroenterol
+VL  - 26
+IS  - 1
+SP  - 13-19
+DO  - 10.4103/sjg.SJG_377_19
+AN  - 31898644
 DB  - PubMed
-UR  - https://doi.org/10.1053/j.gastro.2020.04.062
-AB  - Multicentre RCT (GI-Genius, three Italian centres, 685 patients): real-time CADe increased ADR (54.8% vs 40.4%; RR 1.30, 95% CI 1.14-1.45) and adenomas per colonoscopy without increasing withdrawal time (NCT04079478).
+UR  - https://doi.org/10.4103/sjg.SJG_377_19
+AB  - Single-centre Chinese RCT (deep-learning CADe), primary outcome ADR: CADe increased ADR (39.1% vs 23.9%, OR 1.64, p<0.001) in 1026 patients (508 CADe, 518 control).
 ER  -
 
 TY  - JOUR
-TI  - Artificial intelligence and colonoscopy experience: lessons from two randomised trials
-AU  - Repici
-PY  - 2022
-JO  - Gut
-VL  - 71
-IS  - 4
-SP  - 757-765
-DO  - 10.1136/gutjnl-2021-324471
-AN  - 34187845
+TI  - A computer-aided detection system in the everyday setting of diagnostic, screening, and surveillance colonoscopy: a multicentre randomised controlled trial
+AU  - Maas
+PY  - 2024
+JO  - Endoscopy
+VL  - 56
+IS  - 11
+SP  - 843-850
+DO  - 10.1055/a-2328-2844
+AN  - 38749482
 DB  - PubMed
-UR  - https://doi.org/10.1136/gutjnl-2021-324471
-AB  - Parallel RCT (AID-2) in 660 patients with non-expert endoscopists (GI-Genius): CADe increased ADR (53.3% vs 44.5%; RR 1.22, 95% CI 1.04-1.40); examiner experience had little effect on the CADe benefit (NCT04260321).
+UR  - https://doi.org/10.1055/a-2328-2844
+AB  - Multicentre European/Canadian RCT (seven hospitals), primary outcome ADR: ADR similar with CADe vs conventional colonoscopy (38.4% vs 37.7%, NS) in 497 analysed patients by experienced endoscopists; sessile-serrated-lesion detection was higher with CADe.
 ER  -

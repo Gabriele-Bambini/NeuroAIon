@@ -1,0 +1,8 @@
+A computer-aided detection system in the everyday setting of diagnostic, screening, and surveillance colonoscopy: a multicentre randomised controlled trial
+
+Maas 2024 | Endoscopy 56(11):843-850 (2024)
+PMID: 38749482 | DOI: https://doi.org/10.1055/a-2328-2844
+PMC full text: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11524745/
+
+Abstract
+Multicentre European/Canadian RCT (seven hospitals), primary outcome ADR: ADR similar with CADe vs conventional colonoscopy (38.4% vs 37.7%, NS) in 497 analysed patients by experienced endoscopists; sessile-serrated-lesion detection was higher with CADe.

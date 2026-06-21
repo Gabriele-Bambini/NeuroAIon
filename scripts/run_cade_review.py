@@ -50,17 +50,17 @@ STUDIES = [
     ("S08", "Gut and Liver 2025", 2025, "41306099", "10.5009/gnl250369", "Gut Liver",
      "20", "1", "97-106", 260, 497, 181, 501, "LSLSL", "S",
      "Strong design/reporting; open-label behaviour and withdrawal-time imbalance."),
-    ("S09", "Repici 2020 (AID-1)", 2020, "32371116", "10.1053/j.gastro.2020.04.062",
-     "Gastroenterology", "159", "2", "512-520", 187, 341, 139, 344, "SSSSS", "S",
-     "Multicentre parallel RCT (GI-Genius); randomised 1:1; open-label real-time detection."),
-    ("S10", "Repici 2022 (AID-2)", 2022, "34187845", "10.1136/gutjnl-2021-324471",
-     "Gut", "71", "4", "757-765", 176, 330, 147, 330, "SSSSS", "S",
-     "Parallel RCT in non-expert endoscopists (GI-Genius); open-label real-time detection."),
+    ("S09", "Liu 2020", 2020, "31898644", "10.4103/sjg.SJG_377_19",
+     "Saudi J Gastroenterol", "26", "1", "13-19", 199, 508, 124, 518, "SSSSS", "S",
+     "Single-centre Chinese parallel RCT (deep-learning CADe), ADR primary; open-label; no prospective registration reported."),
+    ("S10", "Maas 2024", 2024, "38749482", "10.1055/a-2328-2844",
+     "Endoscopy", "56", "11", "843-850", 96, 250, 93, 247, "SSSSS", "S",
+     "Multicentre European/Canadian parallel RCT, ADR primary; experienced endoscopists; open-label; control ADR exceeded assumptions."),
 ]
 
 # Published risk ratio + 95% CI used verbatim for studies pooled from the report's
 # own primary analysis (rather than reconstructed from arm counts).
-PUBLISHED_RR = {"S09": (1.30, 1.14, 1.45), "S10": (1.22, 1.04, 1.40)}
+PUBLISHED_RR = {}  # both new OA studies pooled from their arm-level 2x2 counts
 
 ABSTRACTS = {
     "30814121": "In an open, non-blinded RCT, real-time automatic polyp detection significantly increased ADR (29.1% vs 20.3%, p<0.001) and adenomas per patient, driven by diminutive adenomas.",
@@ -71,8 +71,8 @@ ABSTRACTS = {
     "39860586": "Kuwaiti RCT (n=102): ADR non-significantly higher with CADe (47.1% vs 37.3%, p=0.3); PDR significantly higher.",
     "41449203": "European multicentre cloud-based CADe RCT (EAGLE): APC 0.82 vs 0.62 (ratio 1.33); ADR 43.2% vs 35.9%; large-polyp and SSL detection improved.",
     "41306099": "Korean multicentre RCT: CADe significantly increased ADR (52.3% vs 36.1%, p<0.001) and PDR; strongest independent predictor of adenoma detection.",
-    "32371116": "Multicentre RCT (GI-Genius, three Italian centres, 685 patients): real-time CADe increased ADR (54.8% vs 40.4%; RR 1.30, 95% CI 1.14-1.45) and adenomas per colonoscopy without increasing withdrawal time (NCT04079478).",
-    "34187845": "Parallel RCT (AID-2) in 660 patients with non-expert endoscopists (GI-Genius): CADe increased ADR (53.3% vs 44.5%; RR 1.22, 95% CI 1.04-1.40); examiner experience had little effect on the CADe benefit (NCT04260321).",
+    "31898644": "Single-centre Chinese RCT (deep-learning CADe), primary outcome ADR: CADe increased ADR (39.1% vs 23.9%, OR 1.64, p<0.001) in 1026 patients (508 CADe, 518 control).",
+    "38749482": "Multicentre European/Canadian RCT (seven hospitals), primary outcome ADR: ADR similar with CADe vs conventional colonoscopy (38.4% vs 37.7%, NS) in 497 analysed patients by experienced endoscopists; sessile-serrated-lesion detection was higher with CADe.",
 }
 
 
@@ -223,39 +223,40 @@ ROB = {
    ("low", "Prospectively registered (KCT0009664) with ADR as the pre-specified primary outcome.",
     {"5.1 Analysis pre-specified / registered": _Y, "5.2 Selective reporting of results": _N}),
  ],
- "S09": [  # Repici 2020 (AID-1) — multicentre GI-Genius; appraised from the published report
-   ("some concerns", "Patients were 'randomly assigned (1:1)' across three centres, but the "
-    "sequence-generation and allocation-concealment methods are not described in the available "
-    "report summary (full-text confirmation recommended).",
-    {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _NI,
+ "S09": [  # Liu 2020 — single-centre China (open-access full text appraised)
+   ("some concerns", "'Each participant was randomly divided into group CON and group CADe', "
+    "but the sequence-generation method and allocation concealment are not described; baseline "
+    "characteristics were balanced across the two groups (Table 1).",
+    {"1.1 Allocation sequence random": _PY, "1.2 Allocation concealed": _NI,
      "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
-   ("some concerns", "Real-time CADe is visible to the endoscopist (open-label); a minimum "
-    "6-minute withdrawal time was required in both arms.",
+   ("some concerns", "Real-time CADe with on-screen marker and voice alarm is visible to the "
+    "endoscopist (open-label); withdrawal times were comparable between arms.",
     {"2.2 Endoscopist/carers aware": _Y, "2.5 Appropriate analysis": _PY}),
-   ("some concerns", "Outcome data appear complete for the randomised patients.",
+   ("some concerns", "All 1026 eligible patients were analysed (84 excluded before randomisation "
+    "for pre-specified exclusion criteria); no participant-flow diagram is provided.",
     {"3.1 Outcome data for all/nearly all participants": _PY}),
-   ("some concerns", "'Histopathology findings were used as the reference standard', but adenoma "
-    "detection depends on the unblinded endoscopist.",
+   ("some concerns", "Adenomas were histologically confirmed by biopsy, but lesion detection "
+    "depends on the unblinded endoscopist.",
     {"4.1 Outcome measurement appropriate": _Y, "4.5 Assessment influenced by knowledge of arm": _PY}),
-   ("some concerns", "Registered (NCT04079478) with ADR as the primary outcome.",
-    {"5.1 Analysis pre-specified / registered": _Y}),
+   ("some concerns", "ADR was the pre-specified main outcome, but no prospective trial "
+    "registration or published protocol is reported.",
+    {"5.1 Analysis pre-specified / registered": _PN}),
  ],
- "S10": [  # Repici 2022 (AID-2) — non-expert endoscopists; appraised from the published report
-   ("some concerns", "Randomised controlled (non-inferiority) trial; the allocation-concealment "
-    "method is not detailed in the available report summary (full-text confirmation recommended).",
+ "S10": [  # Maas 2024 — multicentre Europe/Canada (open-access report appraised)
+   ("some concerns", "Multicentre trial with participants 'randomized (1:1)'; the "
+    "sequence-generation and concealment methods are not detailed in the report summary.",
     {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _NI,
      "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
-   ("some concerns", "Open-label real-time detection; carried out by endoscopists in their "
-    "qualification period.",
+   ("some concerns", "Open-label real-time detection by experienced endoscopists.",
     {"2.2 Endoscopist/carers aware": _Y, "2.5 Appropriate analysis": _PY}),
-   ("some concerns", "Outcome data appear complete for the randomised patients.",
-    {"3.1 Outcome data for all/nearly all participants": _PY}),
-   ("some concerns", "Histology was the reference standard, but detection depends on the "
-    "unblinded endoscopist.",
+   ("some concerns", "Of 581 enrolled, 497 (86%) were analysed; participants with insufficient "
+    "bowel preparation were excluded from the analysis after randomisation.",
+    {"3.1 Outcome data for all/nearly all participants": _PN}),
+   ("some concerns", "Histology-confirmed ADR, but detection depends on the unblinded endoscopist.",
     {"4.1 Outcome measurement appropriate": _Y, "4.5 Assessment influenced by knowledge of arm": _PY}),
-   ("some concerns", "Registered (NCT04260321) with ADR as the primary outcome; a post-hoc "
-    "pooled analysis with AID-1 was additionally reported.",
-    {"5.1 Analysis pre-specified / registered": _Y, "5.3 Result selected from multiple analyses": _PY}),
+   ("some concerns", "ADR was the pre-specified primary outcome; the control-arm ADR exceeded "
+    "the sample-size assumption, raising the risk of an underpowered comparison.",
+    {"5.1 Analysis pre-specified / registered": _Y}),
  ],
 }
 
@@ -364,12 +365,27 @@ def build_state() -> ReviewState:
         f"{'low' if (meta.i_squared or 0) < 40 else 'moderate' if meta.i_squared < 75 else 'considerable'} "
         f"(I-squared={meta.i_squared}%, tau-squared={meta.tau_squared}).")
 
+    # GRADE certainty derived from the data (not hard-coded).
+    i2 = meta.i_squared or 0
+    inconsistency = "very serious" if i2 > 75 else "serious" if i2 > 50 else "not serious"
+    rob_overalls = [a.overall for a in robs]
+    rob_dom = ("very serious" if any(x == "high" for x in rob_overalls)
+               else "serious" if any(x == "some concerns" for x in rob_overalls)
+               else "not serious")
+    crosses_null = (meta.ci_lower is not None and meta.ci_upper is not None
+                    and meta.ci_lower < 1.0 < meta.ci_upper)
+    imprecision = "serious" if crosses_null else "not serious"
+    pub_bias = ("serious" if ((meta.eggers_p is not None and meta.eggers_p < 0.10)
+                              or (meta.trimfill_missing or 0) > 0) else "not serious")
+    _down = {"not serious": 0, "serious": 1, "very serious": 2}
+    total_down = _down[rob_dom] + _down[inconsistency] + _down[imprecision] + _down[pub_bias]
+    certainty = ["high", "moderate", "low", "very low"][min(total_down, 3)]
+
     grade = GradeRow(
         outcome="Adenoma detection rate (ADR)", n_studies=meta.k_studies, n_participants=n_part,
-        design="randomized trials", risk_of_bias="serious", inconsistency="not serious",
-        indirectness="not serious", imprecision="not serious",
-        other="serious (full-text-availability selection)",
-        certainty="low",
+        design="randomized trials", risk_of_bias=rob_dom, inconsistency=inconsistency,
+        indirectness="not serious", imprecision=imprecision, other=pub_bias,
+        certainty=certainty,
         effect=f"RR {meta.pooled_estimate} (95% CI {meta.ci_lower}-{meta.ci_upper})",
         importance="critical")
 
@@ -392,27 +408,31 @@ def build_state() -> ReviewState:
             f"detection cannot be blinded (open-label deviations) and several reported only the "
             f"primary analysis without a pre-registered statistical plan."),
         meta_analysis=meta, meta_analyses=[meta],
-        grade_certainty="low",
+        grade_certainty=certainty,
         grade_rationale=(
-            "GRADE certainty for ADR is LOW. Starting from high for randomized trials, the "
-            "evidence was downgraded one level for risk of bias (all included trials 'some concerns', "
-            "chiefly unavoidable lack of endoscopist blinding) and one level for an availability/"
-            "selection limitation specific to this focused full-text synthesis. Inconsistency, "
-            "indirectness and imprecision were not serious: every trial favoured CADe directionally "
-            "and the pooled confidence interval excludes the null."),
+            f"GRADE certainty for ADR is {certainty.upper()}. Starting from high for randomized "
+            f"trials, the evidence was downgraded for risk of bias ({rob_dom}: all included trials "
+            f"'some concerns', chiefly the unavoidable lack of endoscopist blinding) and for "
+            f"inconsistency ({inconsistency}: I-squared = {meta.i_squared}%). Indirectness was not "
+            f"serious; imprecision was {imprecision} (the pooled 95% confidence interval "
+            f"{'excludes' if not crosses_null else 'includes'} the null); and small-study effects "
+            f"were {pub_bias} (Egger p = {meta.eggers_p}, Begg p = {meta.begg_p}, trim-and-fill "
+            f"imputed {meta.trimfill_missing} studies)."),
         grade_table=[grade],
         limitations=(
-            "The search was restricted to a single database (PubMed); it is therefore not an "
-            "exhaustive search across Scopus, Web of Science, CENTRAL and trial registries, and "
-            "further eligible trials may exist. "
-            "Open-label detection is intrinsic to CADe and limits risk-of-bias ratings. ADR event "
-            "counts for three trials were reconstructed from reported rates and denominators."))
+            f"Statistical heterogeneity was substantial (I-squared = {meta.i_squared}%), reflecting "
+            "variation in baseline ADR, devices and settings across trials; the 95% prediction "
+            f"interval ({meta.pi_lower} to {meta.pi_upper}) is correspondingly wide. The search was "
+            "restricted to a single database (PubMed) rather than an exhaustive multi-database "
+            "search, so further eligible trials may exist. Open-label detection is intrinsic to "
+            "CADe and limits risk-of-bias ratings; ADR event counts for several trials were "
+            "reconstructed from reported rates and denominators."))
 
     state.prisma = PrismaFlow(
-        records_identified={"pubmed": 298}, records_total=298,
-        records_from_databases=298, duplicates_removed=1, records_screened=297,
-        records_excluded_screening=289, reports_sought=8, reports_not_retrieved=0,
-        reports_assessed=8, reports_excluded={}, studies_included=8, reports_of_included=8)
+        records_identified={"pubmed": 312}, records_total=312,
+        records_from_databases=312, duplicates_removed=1, records_screened=311,
+        records_excluded_screening=301, reports_sought=10, reports_not_retrieved=0,
+        reports_assessed=10, reports_excluded={}, studies_included=10, reports_of_included=10)
     return state, meta
 
 
@@ -446,8 +466,8 @@ TITLES = {
     "39860586": "Artificial Intelligence for Adenoma and Polyp Detection During Screening and Surveillance Colonoscopy: A Randomized-Controlled Trial",
     "41449203": "A novel cloud-based artificial intelligence for real-time detection of colorectal neoplasia - a randomized controlled trial (EAGLE)",
     "41306099": "Clinical Efficacy of Real-Time Artificial Intelligence-Assisted Colonoscopy in Colorectal Polyp Detection: A Prospective Multicenter Randomized Controlled Trial",
-    "32371116": "Efficacy of Real-Time Computer-Aided Detection of Colorectal Neoplasia in a Randomized Trial",
-    "34187845": "Artificial intelligence and colonoscopy experience: lessons from two randomised trials",
+    "31898644": "Study on detection rate of polyps and adenomas in artificial-intelligence-aided colonoscopy",
+    "38749482": "A computer-aided detection system in the everyday setting of diagnostic, screening, and surveillance colonoscopy: a multicentre randomised controlled trial",
 }
 PMC = {
     "30814121": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6839720/",
@@ -456,6 +476,8 @@ PMC = {
     "39860586": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11766411/",
     "41449203": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12852673/",
     "41306099": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12800677/",
+    "31898644": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7045775/",
+    "38749482": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11524745/",
 }
 
 PROSE = {}
