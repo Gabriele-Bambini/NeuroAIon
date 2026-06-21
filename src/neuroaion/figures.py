@@ -149,11 +149,15 @@ def build_forest_figure(meta: MetaAnalysisResult, *, treatment: str = "",
         ax.plot([xt, xt], [-0.02, 0.0], color=C_AXIS, lw=0.8)
         lab = f"{10**tv:g}" if ratio else f"{tv:g}"
         ax.text(xt, -0.14, lab, fontsize=6.6, ha="center", va="top")
-    # favours labels
-    lft = f"Favours {treatment}" if treatment else ("Favours lower" if ratio else "Favours control")
-    rgt = f"Favours {control}" if control else ("Favours higher" if ratio else "Favours intervention")
-    ax.text((PX0 + X(null)) / 2, -0.42, lft, fontsize=6.4, ha="center", va="top")
-    ax.text((X(null) + PX1) / 2, -0.42, rgt, fontsize=6.4, ha="center", va="top")
+    # favours labels — pinned to the axis extremes (left = control, right = treatment)
+    # so the two captions can never overlap near the null line.
+    def _shrt(x, n=18):
+        x = (x or "").strip()
+        return (x[: n - 1].rstrip() + "…") if len(x) > n else x
+    lft = f"← Favours {_shrt(control)}" if control else ("← Favours lower" if ratio else "← Favours control")
+    rgt = f"Favours {_shrt(treatment)} →" if treatment else ("Favours higher →" if ratio else "Favours intervention →")
+    ax.text(PX0, -0.46, lft, fontsize=6.3, ha="left", va="top", color="#555")
+    ax.text(PX1, -0.46, rgt, fontsize=6.3, ha="right", va="top", color="#555")
 
     # heterogeneity footer
     ax.text(LBL_X, -0.95, _het_line(meta), fontsize=6.8, va="top")
@@ -403,14 +407,14 @@ def save_meta_figures(meta: MetaAnalysisResult, outdir, *, treatment="", control
         fig = build_forest_figure(meta, treatment=treatment, control=control)
         for fmt in formats:
             p = out / f"forest.{fmt}"
-            fig.savefig(p, bbox_inches="tight", facecolor="white")
+            fig.savefig(p, bbox_inches="tight", facecolor="white", dpi=200)
             res["forest"].append(p)
         plt.close(fig)
     if meta and meta.funnel and meta.pooled_estimate is not None:
         fig = build_funnel_figure(meta)
         for fmt in formats:
             p = out / f"funnel.{fmt}"
-            fig.savefig(p, bbox_inches="tight", facecolor="white")
+            fig.savefig(p, bbox_inches="tight", facecolor="white", dpi=200)
             res["funnel"].append(p)
         plt.close(fig)
     return res
@@ -424,7 +428,7 @@ def save_prisma_figure(flow: PrismaFlow, outdir, formats=("pdf", "png")) -> list
     paths = []
     for fmt in formats:
         p = out / f"prisma_flow.{fmt}"
-        fig.savefig(p, bbox_inches="tight", facecolor="white")
+        fig.savefig(p, bbox_inches="tight", facecolor="white", dpi=200)
         paths.append(p)
     plt.close(fig)
     return paths

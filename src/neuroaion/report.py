@@ -246,8 +246,20 @@ def render_figures(out_dir: Path, state: ReviewState) -> dict:
     written: dict[str, list] = {}
     meta = state.synthesis.meta_analysis
     p = state.protocol
-    treatment = (p.pico.intervention or "intervention").split("(")[0].strip()[:24]
-    control = (p.pico.comparator or "control").split("(")[0].strip()[:24]
+
+    def _short_arm(text: str, default: str) -> str:
+        """A concise arm label for the forest 'favours' captions: an acronym in
+        parentheses if present (e.g. '(CADe)'), else the first two or three words."""
+        import re as _re
+        text = (text or default).strip()
+        m = _re.search(r"\(([A-Za-z][A-Za-z0-9/+-]{1,7})\)", text)
+        if m:
+            return m.group(1)
+        words = [w for w in _re.split(r"[\s/(]+", text) if w][:3]
+        return (" ".join(words))[:22].strip() or default
+
+    treatment = _short_arm(p.pico.intervention, "intervention")
+    control = _short_arm(p.pico.comparator, "control")
 
     try:
         from . import figures

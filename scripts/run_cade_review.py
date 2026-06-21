@@ -363,7 +363,7 @@ def build_state() -> ReviewState:
         f"(95% CI {meta.ci_lower}-{meta.ci_upper}); the effect {'reached' if sig else 'did not reach'} "
         f"statistical significance. Heterogeneity was "
         f"{'low' if (meta.i_squared or 0) < 40 else 'moderate' if meta.i_squared < 75 else 'considerable'} "
-        f"(I-squared={meta.i_squared}%, tau-squared={meta.tau_squared}).")
+        f"(I²={meta.i_squared}%, τ²={meta.tau_squared}).")
 
     # GRADE certainty derived from the data (not hard-coded).
     i2 = meta.i_squared or 0
@@ -398,7 +398,7 @@ def build_state() -> ReviewState:
             f"RR of {meta.pooled_estimate} (95% CI {meta.ci_lower} to {meta.ci_upper}; "
             f"{meta.test_dist}={meta.test_stat}, p={meta.p_value}). Between-study heterogeneity "
             f"was {('low' if (meta.i_squared or 0) < 40 else 'moderate')} "
-            f"(I^2={meta.i_squared}%, tau^2={meta.tau_squared}, Cochran Q={meta.q_statistic}, "
+            f"(I²={meta.i_squared}%, τ²={meta.tau_squared}, Cochran Q = {meta.q_statistic}, "
             f"p={meta.q_p_value}); the 95% prediction interval was "
             f"{meta.pi_lower} to {meta.pi_upper}. The direction of effect favoured CADe in every "
             f"trial. A leave-one-out sensitivity analysis did not materially change the estimate, "
@@ -413,14 +413,14 @@ def build_state() -> ReviewState:
             f"GRADE certainty for ADR is {certainty.upper()}. Starting from high for randomized "
             f"trials, the evidence was downgraded for risk of bias ({rob_dom}: all included trials "
             f"'some concerns', chiefly the unavoidable lack of endoscopist blinding) and for "
-            f"inconsistency ({inconsistency}: I-squared = {meta.i_squared}%). Indirectness was not "
+            f"inconsistency ({inconsistency}: I² = {meta.i_squared}%). Indirectness was not "
             f"serious; imprecision was {imprecision} (the pooled 95% confidence interval "
             f"{'excludes' if not crosses_null else 'includes'} the null); and small-study effects "
             f"were {pub_bias} (Egger p = {meta.eggers_p}, Begg p = {meta.begg_p}, trim-and-fill "
             f"imputed {meta.trimfill_missing} studies)."),
         grade_table=[grade],
         limitations=(
-            f"Statistical heterogeneity was substantial (I-squared = {meta.i_squared}%), reflecting "
+            f"Statistical heterogeneity was substantial (I² = {meta.i_squared}%), reflecting "
             "variation in baseline ADR, devices and settings across trials; the 95% prediction "
             f"interval ({meta.pi_lower} to {meta.pi_upper}) is correspondingly wide. The search was "
             "restricted to a single database (PubMed) rather than an exhaustive multi-database "
@@ -517,7 +517,7 @@ def build_prose(state, meta):
             f"Hartung-Knapp correction), with GRADE certainty. "
             f"Results: {meta.k_studies} RCTs ({n} participants) were included. The pooled risk ratio for ADR "
             f"was {meta.pooled_estimate} (95% CI {meta.ci_lower}-{meta.ci_upper}; "
-            f"I^2={meta.i_squared}%; 95% prediction interval {meta.pi_lower}-{meta.pi_upper}). "
+            f"I²={meta.i_squared}%; 95% prediction interval {meta.pi_lower}-{meta.pi_upper}). "
             f"All trials favoured CADe directionally; all were rated 'some concerns' on RoB 2. "
             f"Conclusions: Within this evidence body, real-time CADe is "
             f"associated with a higher ADR (GRADE certainty: low)."),
@@ -541,7 +541,7 @@ def build_prose(state, meta):
             "with RoB 2. The effect measure was the risk ratio of ADR; arm-level counts were "
             "pooled on the natural-log scale with an inverse-variance random-effects model, the "
             "REML estimator of between-study variance and the Hartung-Knapp-Sidik-Jonkman "
-            "variance correction. Heterogeneity was summarised with Cochran's Q, I^2 and tau^2, "
+            "variance correction. Heterogeneity was summarised with Cochran's Q, I² and τ², "
             "with a 95% prediction interval; small-study effects were examined with Egger's test "
             "and trim-and-fill, and a leave-one-out sensitivity analysis was performed. Certainty "
             "of evidence was rated with GRADE."),
@@ -550,7 +550,7 @@ def build_prose(state, meta):
             f"detection rate (pooled RR {meta.pooled_estimate}, 95% CI {meta.ci_lower}-"
             f"{meta.ci_upper}), with a consistent direction of effect and "
             f"{'low' if (meta.i_squared or 0) < 40 else 'moderate'} statistical heterogeneity "
-            f"(I^2={meta.i_squared}%). The magnitude is clinically plausible and concordant with "
+            f"(I²={meta.i_squared}%). The magnitude is clinically plausible and concordant with "
             f"the wider CADe literature. Confidence is tempered by the unavoidable lack of "
             f"endoscopist blinding inherent to real-time alerts, by reconstructed event counts in "
             f"three trials, and by a focused single-database evidence base. The 95% prediction "

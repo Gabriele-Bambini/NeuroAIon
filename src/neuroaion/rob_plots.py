@@ -235,14 +235,14 @@ def save_rob_figures(assessments: list["object"], outdir,
     fig = build_rob_traffic_figure(assessments)
     for fmt in formats:
         p = out / f"rob_traffic.{fmt}"
-        fig.savefig(p, bbox_inches="tight", facecolor="white")
+        fig.savefig(p, bbox_inches="tight", facecolor="white", dpi=200)
         res["traffic"].append(p)
     plt.close(fig)
 
     fig = build_rob_summary_figure(assessments)
     for fmt in formats:
         p = out / f"rob_summary.{fmt}"
-        fig.savefig(p, bbox_inches="tight", facecolor="white")
+        fig.savefig(p, bbox_inches="tight", facecolor="white", dpi=200)
         res["summary"].append(p)
     plt.close(fig)
     return res
