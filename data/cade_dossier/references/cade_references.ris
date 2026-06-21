@@ -117,3 +117,33 @@ DB  - PubMed
 UR  - https://doi.org/10.5009/gnl250369
 AB  - Korean multicentre RCT: CADe significantly increased ADR (52.3% vs 36.1%, p<0.001) and PDR; strongest independent predictor of adenoma detection.
 ER  -
+
+TY  - JOUR
+TI  - Efficacy of Real-Time Computer-Aided Detection of Colorectal Neoplasia in a Randomized Trial
+AU  - Repici
+PY  - 2020
+JO  - Gastroenterology
+VL  - 159
+IS  - 2
+SP  - 512-520
+DO  - 10.1053/j.gastro.2020.04.062
+AN  - 32371116
+DB  - PubMed
+UR  - https://doi.org/10.1053/j.gastro.2020.04.062
+AB  - Multicentre RCT (GI-Genius, three Italian centres, 685 patients): real-time CADe increased ADR (54.8% vs 40.4%; RR 1.30, 95% CI 1.14-1.45) and adenomas per colonoscopy without increasing withdrawal time (NCT04079478).
+ER  -
+
+TY  - JOUR
+TI  - Artificial intelligence and colonoscopy experience: lessons from two randomised trials
+AU  - Repici
+PY  - 2022
+JO  - Gut
+VL  - 71
+IS  - 4
+SP  - 757-765
+DO  - 10.1136/gutjnl-2021-324471
+AN  - 34187845
+DB  - PubMed
+UR  - https://doi.org/10.1136/gutjnl-2021-324471
+AB  - Parallel RCT (AID-2) in 660 patients with non-expert endoscopists (GI-Genius): CADe increased ADR (53.3% vs 44.5%; RR 1.22, 95% CI 1.04-1.40); examiner experience had little effect on the CADe benefit (NCT04260321).
+ER  -

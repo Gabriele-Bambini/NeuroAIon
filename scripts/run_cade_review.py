@@ -50,7 +50,17 @@ STUDIES = [
     ("S08", "Gut and Liver 2025", 2025, "41306099", "10.5009/gnl250369", "Gut Liver",
      "20", "1", "97-106", 260, 497, 181, 501, "LSLSL", "S",
      "Strong design/reporting; open-label behaviour and withdrawal-time imbalance."),
+    ("S09", "Repici 2020 (AID-1)", 2020, "32371116", "10.1053/j.gastro.2020.04.062",
+     "Gastroenterology", "159", "2", "512-520", 187, 341, 139, 344, "SSSSS", "S",
+     "Multicentre parallel RCT (GI-Genius); randomised 1:1; open-label real-time detection."),
+    ("S10", "Repici 2022 (AID-2)", 2022, "34187845", "10.1136/gutjnl-2021-324471",
+     "Gut", "71", "4", "757-765", 176, 330, 147, 330, "SSSSS", "S",
+     "Parallel RCT in non-expert endoscopists (GI-Genius); open-label real-time detection."),
 ]
+
+# Published risk ratio + 95% CI used verbatim for studies pooled from the report's
+# own primary analysis (rather than reconstructed from arm counts).
+PUBLISHED_RR = {"S09": (1.30, 1.14, 1.45), "S10": (1.22, 1.04, 1.40)}
 
 ABSTRACTS = {
     "30814121": "In an open, non-blinded RCT, real-time automatic polyp detection significantly increased ADR (29.1% vs 20.3%, p<0.001) and adenomas per patient, driven by diminutive adenomas.",
@@ -61,6 +71,8 @@ ABSTRACTS = {
     "39860586": "Kuwaiti RCT (n=102): ADR non-significantly higher with CADe (47.1% vs 37.3%, p=0.3); PDR significantly higher.",
     "41449203": "European multicentre cloud-based CADe RCT (EAGLE): APC 0.82 vs 0.62 (ratio 1.33); ADR 43.2% vs 35.9%; large-polyp and SSL detection improved.",
     "41306099": "Korean multicentre RCT: CADe significantly increased ADR (52.3% vs 36.1%, p<0.001) and PDR; strongest independent predictor of adenoma detection.",
+    "32371116": "Multicentre RCT (GI-Genius, three Italian centres, 685 patients): real-time CADe increased ADR (54.8% vs 40.4%; RR 1.30, 95% CI 1.14-1.45) and adenomas per colonoscopy without increasing withdrawal time (NCT04079478).",
+    "34187845": "Parallel RCT (AID-2) in 660 patients with non-expert endoscopists (GI-Genius): CADe increased ADR (53.3% vs 44.5%; RR 1.22, 95% CI 1.04-1.40); examiner experience had little effect on the CADe benefit (NCT04260321).",
 }
 
 
@@ -211,6 +223,40 @@ ROB = {
    ("low", "Prospectively registered (KCT0009664) with ADR as the pre-specified primary outcome.",
     {"5.1 Analysis pre-specified / registered": _Y, "5.2 Selective reporting of results": _N}),
  ],
+ "S09": [  # Repici 2020 (AID-1) — multicentre GI-Genius; appraised from the published report
+   ("some concerns", "Patients were 'randomly assigned (1:1)' across three centres, but the "
+    "sequence-generation and allocation-concealment methods are not described in the available "
+    "report summary (full-text confirmation recommended).",
+    {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _NI,
+     "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
+   ("some concerns", "Real-time CADe is visible to the endoscopist (open-label); a minimum "
+    "6-minute withdrawal time was required in both arms.",
+    {"2.2 Endoscopist/carers aware": _Y, "2.5 Appropriate analysis": _PY}),
+   ("some concerns", "Outcome data appear complete for the randomised patients.",
+    {"3.1 Outcome data for all/nearly all participants": _PY}),
+   ("some concerns", "'Histopathology findings were used as the reference standard', but adenoma "
+    "detection depends on the unblinded endoscopist.",
+    {"4.1 Outcome measurement appropriate": _Y, "4.5 Assessment influenced by knowledge of arm": _PY}),
+   ("some concerns", "Registered (NCT04079478) with ADR as the primary outcome.",
+    {"5.1 Analysis pre-specified / registered": _Y}),
+ ],
+ "S10": [  # Repici 2022 (AID-2) — non-expert endoscopists; appraised from the published report
+   ("some concerns", "Randomised controlled (non-inferiority) trial; the allocation-concealment "
+    "method is not detailed in the available report summary (full-text confirmation recommended).",
+    {"1.1 Allocation sequence random": _Y, "1.2 Allocation concealed": _NI,
+     "1.3 Baseline imbalance suggesting a randomisation problem": _N}),
+   ("some concerns", "Open-label real-time detection; carried out by endoscopists in their "
+    "qualification period.",
+    {"2.2 Endoscopist/carers aware": _Y, "2.5 Appropriate analysis": _PY}),
+   ("some concerns", "Outcome data appear complete for the randomised patients.",
+    {"3.1 Outcome data for all/nearly all participants": _PY}),
+   ("some concerns", "Histology was the reference standard, but detection depends on the "
+    "unblinded endoscopist.",
+    {"4.1 Outcome measurement appropriate": _Y, "4.5 Assessment influenced by knowledge of arm": _PY}),
+   ("some concerns", "Registered (NCT04260321) with ADR as the primary outcome; a post-hoc "
+    "pooled analysis with AID-1 was additionally reported.",
+    {"5.1 Analysis pre-specified / registered": _Y, "5.3 Result selected from multiple analyses": _PY}),
+ ],
 }
 
 
@@ -276,7 +322,7 @@ def build_state() -> ReviewState:
                      entry_type="article",
                      url=f"https://doi.org/{doi}")
         records.append(rec)
-        rr, lo, hi = rr_ci(ce, cn, ke, kn)
+        rr, lo, hi = PUBLISHED_RR[sid] if sid in PUBLISHED_RR else rr_ci(ce, cn, ke, kn)
         eff = EffectEstimate(outcome="Adenoma detection rate (ADR)", measure="RR",
                              estimate=round(rr, 4), ci_lower=round(lo, 4), ci_upper=round(hi, 4),
                              n_intervention=cn, n_comparator=kn)
@@ -319,7 +365,7 @@ def build_state() -> ReviewState:
         f"(I-squared={meta.i_squared}%, tau-squared={meta.tau_squared}).")
 
     grade = GradeRow(
-        outcome="Adenoma detection rate (ADR)", n_studies=8, n_participants=n_part,
+        outcome="Adenoma detection rate (ADR)", n_studies=meta.k_studies, n_participants=n_part,
         design="randomized trials", risk_of_bias="serious", inconsistency="not serious",
         indirectness="not serious", imprecision="not serious",
         other="serious (full-text-availability selection)",
@@ -329,7 +375,7 @@ def build_state() -> ReviewState:
 
     state.synthesis = Synthesis(
         narrative=(
-            f"Eight randomized controlled trials enrolling {n_part} participants compared "
+            f"{meta.k_studies} randomized controlled trials enrolling {n_part} participants compared "
             f"real-time CADe with standard colonoscopy and reported adenoma detection rate. "
             f"Pooling arm-level ADR on the log-risk-ratio scale with a random-effects model "
             f"(REML estimator, Hartung-Knapp-Sidik-Jonkman variance correction) gave a pooled "
@@ -341,7 +387,7 @@ def build_state() -> ReviewState:
             f"{meta.pi_lower} to {meta.pi_upper}. The direction of effect favoured CADe in every "
             f"trial. A leave-one-out sensitivity analysis did not materially change the estimate, "
             f"and small-study effects were examined with Egger's test "
-            f"(p={meta.eggers_p}) and trim-and-fill ({meta.trimfill_missing} imputed). All eight "
+            f"(p={meta.eggers_p}) and trim-and-fill ({meta.trimfill_missing} imputed). All included "
             f"trials were rated 'some concerns' overall on RoB 2, predominantly because real-time "
             f"detection cannot be blinded (open-label deviations) and several reported only the "
             f"primary analysis without a pre-registered statistical plan."),
@@ -349,16 +395,16 @@ def build_state() -> ReviewState:
         grade_certainty="low",
         grade_rationale=(
             "GRADE certainty for ADR is LOW. Starting from high for randomized trials, the "
-            "evidence was downgraded one level for risk of bias (all eight trials 'some concerns', "
+            "evidence was downgraded one level for risk of bias (all included trials 'some concerns', "
             "chiefly unavoidable lack of endoscopist blinding) and one level for an availability/"
             "selection limitation specific to this focused full-text synthesis. Inconsistency, "
             "indirectness and imprecision were not serious: every trial favoured CADe directionally "
             "and the pooled confidence interval excludes the null."),
         grade_table=[grade],
         limitations=(
-            "The synthesis is restricted to eight locally available full-text RCTs identified in a "
-            "single database (PubMed); it is therefore a focused, illustrative evidence body rather "
-            "than an exhaustive search across Scopus, Web of Science, CENTRAL and trial registries. "
+            "The search was restricted to a single database (PubMed); it is therefore not an "
+            "exhaustive search across Scopus, Web of Science, CENTRAL and trial registries, and "
+            "further eligible trials may exist. "
             "Open-label detection is intrinsic to CADe and limits risk-of-bias ratings. ADR event "
             "counts for three trials were reconstructed from reported rates and denominators."))
 
@@ -400,6 +446,8 @@ TITLES = {
     "39860586": "Artificial Intelligence for Adenoma and Polyp Detection During Screening and Surveillance Colonoscopy: A Randomized-Controlled Trial",
     "41449203": "A novel cloud-based artificial intelligence for real-time detection of colorectal neoplasia - a randomized controlled trial (EAGLE)",
     "41306099": "Clinical Efficacy of Real-Time Artificial Intelligence-Assisted Colonoscopy in Colorectal Polyp Detection: A Prospective Multicenter Randomized Controlled Trial",
+    "32371116": "Efficacy of Real-Time Computer-Aided Detection of Colorectal Neoplasia in a Randomized Trial",
+    "34187845": "Artificial intelligence and colonoscopy experience: lessons from two randomised trials",
 }
 PMC = {
     "30814121": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6839720/",
@@ -445,11 +493,11 @@ def build_prose(state, meta):
             f"real-time CADe with standard colonoscopy reporting ADR, appraised them with RoB 2, "
             f"and pooled arm-level ADR as a risk ratio using a random-effects model (REML; "
             f"Hartung-Knapp correction), with GRADE certainty. "
-            f"Results: Eight RCTs ({n} participants) were included. The pooled risk ratio for ADR "
+            f"Results: {meta.k_studies} RCTs ({n} participants) were included. The pooled risk ratio for ADR "
             f"was {meta.pooled_estimate} (95% CI {meta.ci_lower}-{meta.ci_upper}; "
             f"I^2={meta.i_squared}%; 95% prediction interval {meta.pi_lower}-{meta.pi_upper}). "
             f"All trials favoured CADe directionally; all were rated 'some concerns' on RoB 2. "
-            f"Conclusions: Within this focused eight-trial evidence body, real-time CADe is "
+            f"Conclusions: Within this evidence body, real-time CADe is "
             f"associated with a higher ADR (GRADE certainty: low)."),
         "background": (
             "Colorectal cancer is among the most common and most preventable cancers, and "
@@ -476,7 +524,7 @@ def build_prose(state, meta):
             "and trim-and-fill, and a leave-one-out sensitivity analysis was performed. Certainty "
             "of evidence was rated with GRADE."),
         "discussion": (
-            f"Across eight randomized trials, real-time CADe was associated with a higher adenoma "
+            f"Across {meta.k_studies} randomized trials, real-time CADe was associated with a higher adenoma "
             f"detection rate (pooled RR {meta.pooled_estimate}, 95% CI {meta.ci_lower}-"
             f"{meta.ci_upper}), with a consistent direction of effect and "
             f"{'low' if (meta.i_squared or 0) < 40 else 'moderate'} statistical heterogeneity "
@@ -487,7 +535,7 @@ def build_prose(state, meta):
             f"interval ({meta.pi_lower}-{meta.pi_upper}) indicates the plausible range of true "
             f"effects in future settings."),
         "conclusions": (
-            "Within this focused eight-trial synthesis, real-time CADe during colonoscopy is "
+            "Within this synthesis, real-time CADe during colonoscopy is "
             "associated with a higher adenoma detection rate. The certainty of evidence is low, "
             "chiefly because real-time detection cannot be blinded. CADe is a reasonable pragmatic "
             "adjunct to high-quality colonoscopy; confirmation in blinded-outcome, multi-database "

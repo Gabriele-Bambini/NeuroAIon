@@ -1,0 +1,8 @@
+Artificial intelligence and colonoscopy experience: lessons from two randomised trials
+
+Repici 2022 (AID-2) | Gut 71(4):757-765 (2022)
+PMID: 34187845 | DOI: https://doi.org/10.1136/gutjnl-2021-324471
+PMC full text: (not open access — paywalled)
+
+Abstract
+Parallel RCT (AID-2) in 660 patients with non-expert endoscopists (GI-Genius): CADe increased ADR (53.3% vs 44.5%; RR 1.22, 95% CI 1.04-1.40); examiner experience had little effect on the CADe benefit (NCT04260321).

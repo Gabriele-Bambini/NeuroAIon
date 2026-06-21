@@ -1,0 +1,8 @@
+Efficacy of Real-Time Computer-Aided Detection of Colorectal Neoplasia in a Randomized Trial
+
+Repici 2020 (AID-1) | Gastroenterology 159(2):512-520 (2020)
+PMID: 32371116 | DOI: https://doi.org/10.1053/j.gastro.2020.04.062
+PMC full text: (not open access — paywalled)
+
+Abstract
+Multicentre RCT (GI-Genius, three Italian centres, 685 patients): real-time CADe increased ADR (54.8% vs 40.4%; RR 1.30, 95% CI 1.14-1.45) and adenomas per colonoscopy without increasing withdrawal time (NCT04079478).
