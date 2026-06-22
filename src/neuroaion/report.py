@@ -345,6 +345,14 @@ def write_artifacts(out_dir: Path, state: ReviewState, prose: dict[str, str]) ->
     audit.write_audit(out_dir, state)
     write_sources(out_dir, state)
 
+    # Compile the Markdown dossier into polished PDFs (risk-of-bias worksheets +
+    # supplementary materials), mirroring the manuscript's compiled output.
+    try:
+        from . import docs_pdf
+        docs_pdf.compile_dossier(out_dir, state)
+    except Exception:  # noqa: BLE001 — optional reportlab dependency / best-effort
+        pass
+
     return report_path
 
 
