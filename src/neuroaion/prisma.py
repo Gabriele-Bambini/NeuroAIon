@@ -29,10 +29,12 @@ def compute_flow(state: ReviewState) -> PrismaFlow:
     )
     included = len(state.included_studies)
 
-    # Split identification by databases vs. registers (clinical-trials registries).
-    register_sources = {"clinicaltrials", "prospero", "ictrp", "who-ictrp"}
+    # Split identification by databases vs. registers (trial/protocol registries).
+    register_hints = ("clinicaltrials", "clinical-trials", "prospero", "ictrp",
+                      "who-ictrp", "who ictrp", "isrctn", "anzctr", "drks",
+                      "chictr", "ctri", "eudract", "registry", "register")
     from_registers = sum(v for k, v in per_source.items()
-                         if k.lower() in register_sources)
+                         if any(h in k.lower() for h in register_hints))
     from_databases = total - from_registers
 
     return PrismaFlow(

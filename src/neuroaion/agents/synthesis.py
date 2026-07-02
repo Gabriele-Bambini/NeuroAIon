@@ -241,10 +241,16 @@ class EvidenceSynthesizer(Agent):
                       rob_overall: dict[str, str]) -> str:
         lines = []
         for ex in extractions:
-            eff = "; ".join(
-                f"{e.outcome or '?'}={e.estimate} "
-                f"[{e.ci_lower},{e.ci_upper}]" for e in ex.effects[:4]
-            ) or "no quantitative effect"
+            parts = []
+            for e in ex.effects[:4]:
+                # Flag any effect derived from raw data (e.g. a mean/SD estimated
+                # from a median summary) so the synthesis can report it honestly
+                # as a computed value, not a directly-reported one.
+                tag = f" (derived: {e.provenance})" if getattr(e, "recomputed", False) \
+                    and getattr(e, "provenance", "") else ""
+                parts.append(f"{e.outcome or '?'}={e.estimate} "
+                             f"[{e.ci_lower},{e.ci_upper}]{tag}")
+            eff = "; ".join(parts) or "no quantitative effect"
             lines.append(
                 f"- {ex.study_label or ex.uid}: design={ex.design or '?'}, "
                 f"n={ex.sample_size}, RoB={rob_overall.get(ex.uid, '?')}; {eff}"
