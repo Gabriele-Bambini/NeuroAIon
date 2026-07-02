@@ -303,21 +303,24 @@ class CoworkPending(RuntimeError):
 
 class CoworkProvider(LLMProvider):
     def __init__(self, handler: Optional[Callable[..., Any]] = None,
-                 response_dir: str | None = None, model: str = "cowork"):
+                 response_dir: str | None = None, model: str = "cowork",
+                 tier: str = "standard"):
         self.handler = handler if handler is not None else _COWORK_HANDLER
         self.dir = response_dir or config.COWORK_DIR or ".neuroaion_cowork"
         self.model = model
+        self.tier = tier          # 'flagship' | 'standard' | 'light' — the agent
+                                  # uses its matching model (Opus/Sonnet/Haiku, ...)
 
     @staticmethod
-    def _key(kind: str, system: str, user: str) -> str:
-        return hashlib.sha1(f"{kind}\x00{system}\x00{user}".encode("utf-8")).hexdigest()[:20]
+    def _key(kind: str, system: str, user: str, tier: str) -> str:
+        return hashlib.sha1(f"{tier}\x00{kind}\x00{system}\x00{user}".encode("utf-8")).hexdigest()[:20]
 
     def _serve(self, kind, *, system, user, schema, cache_prefix, max_tokens):
         if self.handler is not None:
-            return self.handler(kind=kind, system=system, user=user, schema=schema,
-                                cache_prefix=cache_prefix, max_tokens=max_tokens)
+            return self.handler(kind=kind, tier=self.tier, system=system, user=user,
+                                schema=schema, cache_prefix=cache_prefix, max_tokens=max_tokens)
         # Disk batch fallback: return a cached answer or queue the request.
-        key = self._key(kind, system, user)
+        key = self._key(kind, system, user, self.tier)
         rdir = os.path.join(self.dir, "responses")
         qdir = os.path.join(self.dir, "requests")
         os.makedirs(rdir, exist_ok=True)
@@ -328,7 +331,7 @@ class CoworkProvider(LLMProvider):
             raw = open(rpath, encoding="utf-8").read()
             return _parse_json_lenient(raw) if kind == "json" else raw
         with open(os.path.join(qdir, f"{key}.json"), "w", encoding="utf-8") as fh:
-            json.dump({"kind": kind, "system": system, "user": user,
+            json.dump({"kind": kind, "tier": self.tier, "system": system, "user": user,
                        "schema": schema, "max_tokens": max_tokens}, fh, indent=2)
         raise CoworkPending(
             f"Cowork request {key} needs an answer. Write {rpath} then re-run to "
@@ -386,3 +389,23 @@ def get_provider(mock: bool, model: str | None = None) -> LLMProvider:
     if config.PROVIDER == "cowork" or (_COWORK_HANDLER is not None and not config.have_api_key()):
         return CoworkProvider(model=model or "cowork")
     return build_provider(config.PROVIDER, model or config.DEFAULT_MODEL)
+
+
+def provider_for_tier(tier, *, mock: bool = False) -> LLMProvider:
+    """Provider that uses the right model for a capability tier
+    ('flagship' | 'standard' | 'light'), routed per provider family.
+
+    * API mode: resolves the concrete model (e.g. Claude flagship -> latest Opus)
+      via :mod:`neuroaion.routing` and builds the configured provider with it.
+    * Cowork mode: returns a CoworkProvider tagged with the tier, so the driving
+      agent (Claude Code / Codex / Gemini Antigravity) uses *its* matching model.
+    Falls back gracefully to mock only when no real provider is available.
+    """
+    from . import routing
+    t = tier.value if hasattr(tier, "value") else str(tier)
+    if mock or not provider_ready():
+        return MockProvider()
+    if config.PROVIDER == "cowork" or (_COWORK_HANDLER is not None and not config.have_api_key()):
+        return CoworkProvider(model=f"cowork:{t}", tier=t)
+    model = routing.resolve_model(config.PROVIDER, t)
+    return build_provider(config.PROVIDER, model)

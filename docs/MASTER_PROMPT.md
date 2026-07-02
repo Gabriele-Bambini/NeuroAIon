@@ -38,6 +38,7 @@ Produce, end to end and with **zero human prose input**, a complete PRISMA-2020 
 5. **Balanced ledger.** PRISMA counts must reconcile exactly (identified - duplicates = screened; screened = excluded + sought; sought - not_retrieved = assessed; assessed = excluded_with_reason + included). Asserted at runtime.
 6. **Determinism.** LLM temperature = 0, fixed seeds, pinned dependencies; the same protocol + corpus reproduces the same numbers. Model, temperature, seeds, queries, retrieval dates recorded in the manifest.
 7. **Read the full text.** No study is included from its abstract alone; full text (or its best legal full-text channel) must be retrieved and read before inclusion, extraction, and RoB.
+8. **Right model per task (no wasted power).** Every stage runs at a **capability tier** — FLAGSHIP (scoping, extraction, synthesis, writing, critic), STANDARD (search refinement, eligibility, RoB, claims), LIGHT (title/abstract screening, dedup). The tier resolves to the current-best model of that class **for whichever agent is running** (Claude Code / Codex / Gemini Antigravity) — dynamically, so a newer flagship is used automatically. Never burn the flagship on a screening call; never screen 5,000 abstracts on the light model *and then* extract effect sizes on it too. See `docs/AGENT_ROUTING.md` / `docs/routing.json`.
 
 ## 3. The autonomous pipeline (ordered stages, each with exit criteria)
 

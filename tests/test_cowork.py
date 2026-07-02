@@ -21,8 +21,8 @@ def test_provider_ready_reflects_cowork_binding(monkeypatch):
 def test_cowork_handler_serves_json_and_text():
     calls = {}
 
-    def handler(*, kind, system, user, schema, cache_prefix, max_tokens):
-        calls[kind] = (system, user)
+    def handler(*, kind, tier, system, user, schema, cache_prefix, max_tokens):
+        calls[kind] = (tier, system, user)
         if kind == "json":
             return {"decision": "include", "reason": "on topic"}
         return "A model-authored narrative."

@@ -1,0 +1,240 @@
+{
+  "tiers": {
+    "FLAGSHIP": "flagship",
+    "STANDARD": "standard",
+    "LIGHT": "light"
+  },
+  "stage_tier": {
+    "scoping": "flagship",
+    "protocol": "flagship",
+    "search_strategy": "standard",
+    "dedup": "light",
+    "screen_ta": "light",
+    "adjudication": "standard",
+    "eligibility": "standard",
+    "extraction": "flagship",
+    "rob": "standard",
+    "synthesis": "flagship",
+    "claims": "standard",
+    "reporter": "flagship",
+    "critic": "flagship"
+  },
+  "families": {
+    "claude": {
+      "scoping": {
+        "tier": "flagship",
+        "model": "claude-opus-4-8"
+      },
+      "protocol": {
+        "tier": "flagship",
+        "model": "claude-opus-4-8"
+      },
+      "search_strategy": {
+        "tier": "standard",
+        "model": "claude-sonnet-5"
+      },
+      "dedup": {
+        "tier": "light",
+        "model": "claude-haiku-4-5"
+      },
+      "screen_ta": {
+        "tier": "light",
+        "model": "claude-haiku-4-5"
+      },
+      "adjudication": {
+        "tier": "standard",
+        "model": "claude-sonnet-5"
+      },
+      "eligibility": {
+        "tier": "standard",
+        "model": "claude-sonnet-5"
+      },
+      "extraction": {
+        "tier": "flagship",
+        "model": "claude-opus-4-8"
+      },
+      "rob": {
+        "tier": "standard",
+        "model": "claude-sonnet-5"
+      },
+      "synthesis": {
+        "tier": "flagship",
+        "model": "claude-opus-4-8"
+      },
+      "claims": {
+        "tier": "standard",
+        "model": "claude-sonnet-5"
+      },
+      "reporter": {
+        "tier": "flagship",
+        "model": "claude-opus-4-8"
+      },
+      "critic": {
+        "tier": "flagship",
+        "model": "claude-opus-4-8"
+      }
+    },
+    "openai": {
+      "scoping": {
+        "tier": "flagship",
+        "model": "gpt-5.1"
+      },
+      "protocol": {
+        "tier": "flagship",
+        "model": "gpt-5.1"
+      },
+      "search_strategy": {
+        "tier": "standard",
+        "model": "gpt-5.1-mini"
+      },
+      "dedup": {
+        "tier": "light",
+        "model": "gpt-5.1-nano"
+      },
+      "screen_ta": {
+        "tier": "light",
+        "model": "gpt-5.1-nano"
+      },
+      "adjudication": {
+        "tier": "standard",
+        "model": "gpt-5.1-mini"
+      },
+      "eligibility": {
+        "tier": "standard",
+        "model": "gpt-5.1-mini"
+      },
+      "extraction": {
+        "tier": "flagship",
+        "model": "gpt-5.1"
+      },
+      "rob": {
+        "tier": "standard",
+        "model": "gpt-5.1-mini"
+      },
+      "synthesis": {
+        "tier": "flagship",
+        "model": "gpt-5.1"
+      },
+      "claims": {
+        "tier": "standard",
+        "model": "gpt-5.1-mini"
+      },
+      "reporter": {
+        "tier": "flagship",
+        "model": "gpt-5.1"
+      },
+      "critic": {
+        "tier": "flagship",
+        "model": "gpt-5.1"
+      }
+    },
+    "gemini": {
+      "scoping": {
+        "tier": "flagship",
+        "model": "gemini-3-pro"
+      },
+      "protocol": {
+        "tier": "flagship",
+        "model": "gemini-3-pro"
+      },
+      "search_strategy": {
+        "tier": "standard",
+        "model": "gemini-3-flash"
+      },
+      "dedup": {
+        "tier": "light",
+        "model": "gemini-3-flash-lite"
+      },
+      "screen_ta": {
+        "tier": "light",
+        "model": "gemini-3-flash-lite"
+      },
+      "adjudication": {
+        "tier": "standard",
+        "model": "gemini-3-flash"
+      },
+      "eligibility": {
+        "tier": "standard",
+        "model": "gemini-3-flash"
+      },
+      "extraction": {
+        "tier": "flagship",
+        "model": "gemini-3-pro"
+      },
+      "rob": {
+        "tier": "standard",
+        "model": "gemini-3-flash"
+      },
+      "synthesis": {
+        "tier": "flagship",
+        "model": "gemini-3-pro"
+      },
+      "claims": {
+        "tier": "standard",
+        "model": "gemini-3-flash"
+      },
+      "reporter": {
+        "tier": "flagship",
+        "model": "gemini-3-pro"
+      },
+      "critic": {
+        "tier": "flagship",
+        "model": "gemini-3-pro"
+      }
+    },
+    "deepseek": {
+      "scoping": {
+        "tier": "flagship",
+        "model": "deepseek-chat"
+      },
+      "protocol": {
+        "tier": "flagship",
+        "model": "deepseek-chat"
+      },
+      "search_strategy": {
+        "tier": "standard",
+        "model": "deepseek-chat"
+      },
+      "dedup": {
+        "tier": "light",
+        "model": "deepseek-chat"
+      },
+      "screen_ta": {
+        "tier": "light",
+        "model": "deepseek-chat"
+      },
+      "adjudication": {
+        "tier": "standard",
+        "model": "deepseek-chat"
+      },
+      "eligibility": {
+        "tier": "standard",
+        "model": "deepseek-chat"
+      },
+      "extraction": {
+        "tier": "flagship",
+        "model": "deepseek-chat"
+      },
+      "rob": {
+        "tier": "standard",
+        "model": "deepseek-chat"
+      },
+      "synthesis": {
+        "tier": "flagship",
+        "model": "deepseek-chat"
+      },
+      "claims": {
+        "tier": "standard",
+        "model": "deepseek-chat"
+      },
+      "reporter": {
+        "tier": "flagship",
+        "model": "deepseek-chat"
+      },
+      "critic": {
+        "tier": "flagship",
+        "model": "deepseek-chat"
+      }
+    }
+  }
+}

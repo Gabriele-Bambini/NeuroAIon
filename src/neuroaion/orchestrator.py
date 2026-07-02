@@ -42,6 +42,10 @@ class Orchestrator:
         self.model = model or config.DEFAULT_MODEL
         self.max_workers = max_workers or config.MAX_WORKERS
         self.provider = get_provider(self.mock, self.model)
+        # Per-stage model-tier routing: each pipeline step gets the right model for
+        # its difficulty (light for high-volume screening, flagship for extraction/
+        # synthesis/writing), resolved per provider family and dynamically upgraded.
+        self._tier_cache: dict[str, object] = {}
         # A cheaper, high-throughput provider can drive screening (e.g. DeepSeek)
         # while the default provider handles redaction.
         self.screen_provider = self.provider
@@ -72,6 +76,19 @@ class Orchestrator:
         self.save_zip = save_zip
         self.last_out_dir: Optional[Path] = None
 
+    def provider_for(self, stage: str):
+        """The LLM provider for a pipeline *stage*, at the stage's capability tier
+        (cached). Screening keeps its dedicated high-throughput provider."""
+        from . import routing
+        from .llm import provider_for_tier
+        tier = routing.tier_for(stage)
+        if stage in ("screen_ta",) and self.screen_provider is not self.provider:
+            return self.screen_provider          # honour an explicit screening backend
+        key = tier.value
+        if key not in self._tier_cache:
+            self._tier_cache[key] = provider_for_tier(tier, mock=self.mock)
+        return self._tier_cache[key]
+
     def log(self, msg: str, state: ReviewState | None = None) -> None:
         self._log_fn(msg)
         if state is not None:
@@ -94,7 +111,7 @@ class Orchestrator:
 
         # Agent 1 — protocol
         self._log_fn(f"[1/8] ProtocolArchitect · building protocol …")
-        protocol = ProtocolArchitect(self.provider, self.seed_protocol_stub()).build(self.seed)
+        protocol = ProtocolArchitect(self.provider_for("protocol"), self.seed_protocol_stub()).build(self.seed)
         state = ReviewState(run_id=run_id, mock=self.mock,
                             model=("mock" if self.mock else self.model), protocol=protocol)
         # Human-readable run folder: <topic-slug>-<timestamp> at the chosen path.
@@ -106,7 +123,7 @@ class Orchestrator:
 
         # Agent 2 — search strategy + identification
         self.log("[2/8] SearchStrategist · search, identify & de-duplicate …", state)
-        strategist = SearchStrategist(self.provider, protocol)
+        strategist = SearchStrategist(self.provider_for("search_strategy"), protocol)
         state.strategy = strategist.design()
         state.records = self._identify(state)
         self.log(f"Identified {len(state.records)} records across "
@@ -120,7 +137,7 @@ class Orchestrator:
 
         # Agent 3 — deduplication
         self.log("      · de-duplication …", state)
-        state.unique_records, removed = DeduplicationAgent(self.provider, protocol).run(state.records)
+        state.unique_records, removed = DeduplicationAgent(self.provider_for("dedup"), protocol).run(state.records)
         self.log(f"{removed} duplicates removed → {len(state.unique_records)} unique records.", state)
 
         # Agents 4 & 5 — dual screening + adjudication
@@ -179,7 +196,7 @@ class Orchestrator:
 
         # Agent 9 — synthesis
         self.log("[7/8] EvidenceSynthesizer · synthesis, meta-analysis & publication bias …", state)
-        state.synthesis = EvidenceSynthesizer(self.provider, protocol).synthesize(
+        state.synthesis = EvidenceSynthesizer(self.provider_for("synthesis"), protocol).synthesize(
             state.extractions, state.rob)
         if state.synthesis.meta_analysis:
             m = state.synthesis.meta_analysis
@@ -189,7 +206,7 @@ class Orchestrator:
         # PRISMA flow + Agent 10 — reporting
         state.prisma = compute_flow(state)
         self.log("[8/8] PRISMAReporter · manuscript, figures, PDF/LaTeX/PROSPERO …", state)
-        prose = PRISMAReporter(self.provider, protocol).write_prose(state)
+        prose = PRISMAReporter(self.provider_for("reporter"), protocol).write_prose(state)
         report_path = write_artifacts(out_dir, state, prose)
 
         if self.make_latex:
@@ -271,8 +288,8 @@ class Orchestrator:
                      f"(references + cited-by).", state)
 
     def _screen(self, state: ReviewState) -> None:
-        screener = TitleAbstractScreener(self.screen_provider, state.protocol)
-        adjudicator = DualScreenAdjudicator(self.screen_provider, state.protocol)
+        screener = TitleAbstractScreener(self.provider_for("screen_ta"), state.protocol)
+        adjudicator = DualScreenAdjudicator(self.provider_for("adjudication"), state.protocol)
         records = state.unique_records
 
         def dual(rec: Record):
@@ -310,7 +327,7 @@ class Orchestrator:
         return ft.text if ft and ft.text else fallback
 
     def _eligibility(self, state: ReviewState) -> None:
-        fulltext = FullTextEligibility(self.provider, state.protocol)
+        fulltext = FullTextEligibility(self.provider_for("eligibility"), state.protocol)
         by_uid = {r.uid: r for r in state.unique_records}
         targets = [by_uid[u] for u in state.included_after_screening if u in by_uid]
 
@@ -336,8 +353,8 @@ class Orchestrator:
                     state.included_studies.append(decision.uid)
 
     def _extract_and_appraise(self, state: ReviewState) -> None:
-        extractor = DataExtractor(self.provider, state.protocol)
-        appraiser = RiskOfBiasAssessor(self.provider, state.protocol)
+        extractor = DataExtractor(self.provider_for("extraction"), state.protocol)
+        appraiser = RiskOfBiasAssessor(self.provider_for("rob"), state.protocol)
         by_uid = {r.uid: r for r in state.unique_records}
         targets = [by_uid[u] for u in state.included_studies if u in by_uid]
 
