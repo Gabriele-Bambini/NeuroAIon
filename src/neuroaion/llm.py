@@ -211,8 +211,15 @@ class MockProvider(LLMProvider):
         )
 
 
-def _sample_schema(schema: dict[str, Any], rng: random.Random, context: str = "") -> Any:
-    """Recursively synthesise a value matching a (subset of) JSON Schema."""
+def _sample_schema(schema: dict[str, Any], rng: random.Random, context: str = "",
+                   key: str = "") -> Any:
+    """Recursively synthesise a value matching a (subset of) JSON Schema.
+
+    ``key`` is the property name being generated; it lets the mock emit
+    *coherent* placeholder effects (a fixed measure, a positive SE) so a demo
+    run actually exercises the meta-analysis / forest / funnel path instead of
+    producing effects the statistics layer correctly rejects.
+    """
     if "enum" in schema:
         return _pick_enum(schema["enum"], rng, context)
 
@@ -224,22 +231,38 @@ def _sample_schema(schema: dict[str, Any], rng: random.Random, context: str = ""
         props = schema.get("properties", {})
         required = set(schema.get("required", props.keys()))
         return {
-            name: _sample_schema(sub, rng, context)
+            name: _sample_schema(sub, rng, context, key=name)
             for name, sub in props.items()
             if name in required
         }
     if t == "array":
         item = schema.get("items", {"type": "string"})
         n = 1
-        return [_sample_schema(item, rng, context) for _ in range(n)]
+        return [_sample_schema(item, rng, context, key=key) for _ in range(n)]
     if t == "integer":
-        return rng.randint(10, 120)
+        return rng.randint(40, 120)
     if t == "number":
-        return round(rng.uniform(-1.0, 1.0), 3)
+        return _sample_number(key, rng)
     if t == "boolean":
         return rng.random() > 0.4
     # string
-    return _sample_string(schema, rng, context)
+    return _sample_string(schema, rng, context, key)
+
+
+def _sample_number(key: str, rng: random.Random) -> float:
+    """Field-aware numeric placeholder — coherent enough to meta-analyse."""
+    k = (key or "").lower()
+    if k == "se":
+        return round(rng.uniform(0.12, 0.35), 3)          # a positive SE
+    if k in ("estimate", "moderator"):
+        return round(rng.uniform(0.15, 0.75), 3)
+    if k == "ci_lower":
+        return round(rng.uniform(-0.1, 0.2), 3)
+    if k == "ci_upper":
+        return round(rng.uniform(0.8, 1.1), 3)
+    if k == "p_value":
+        return round(rng.uniform(0.01, 0.2), 3)
+    return round(rng.uniform(-1.0, 1.0), 3)
 
 
 def _pick_enum(values: list, rng: random.Random, context: str):
@@ -257,7 +280,14 @@ def _pick_enum(values: list, rng: random.Random, context: str):
     return values[0]
 
 
-def _sample_string(schema: dict, rng: random.Random, context: str) -> str:
+def _sample_string(schema: dict, rng: random.Random, context: str, key: str = "") -> str:
+    k = (key or "").lower()
+    if k == "measure":
+        return "SMD"          # a single, consistent, poolable measure for the demo
+    if k == "outcome":
+        return "primary outcome"   # one shared outcome so effects group and pool
+    if k == "design":
+        return "randomized controlled trial"
     title = _extract_record_title(context)
     return f"[mock] {title}" if title else "[mock]"
 
