@@ -285,18 +285,29 @@ class EvidenceSynthesizer(Agent):
                    rob: list[RoBAssessment]) -> Synthesis:
         cfg = self.protocol.synthesis
         rob_overall = {r.uid: r.overall for r in rob}
+        review_type = getattr(self.protocol, "review_type", "intervention")
+        # Scoping and qualitative reviews are descriptive: PRISMA-ScR / thematic
+        # synthesis do not pool effects or grade certainty, so a forced
+        # meta-analysis + GRADE table would be category-inappropriate.
+        quantitative = review_type not in ("scoping", "qualitative")
+        # GRADE (certainty of evidence) applies to gradable quantitative reviews
+        # only, and can be switched off in the protocol.
+        do_grade = quantitative and self.protocol.risk_of_bias.grade \
+            and review_type not in ("prevalence",)
 
         groups = self._group_by_outcome(extractions)
 
         metas: list[MetaAnalysisResult] = []
         grade_rows: list[GradeRow] = []
         # Preserve insertion (study) order, which is deterministic.
-        for name, g in groups.items():
-            meta = self._meta_for_outcome(name, g["effects"], g["labels"], cfg)
-            if meta is not None:
-                metas.append(meta)
-                grade_rows.append(self._grade_row(
-                    name, meta, g["effects"], g["labels"], extractions, rob_overall))
+        if quantitative:
+            for name, g in groups.items():
+                meta = self._meta_for_outcome(name, g["effects"], g["labels"], cfg)
+                if meta is not None:
+                    metas.append(meta)
+                    if do_grade:
+                        grade_rows.append(self._grade_row(
+                            name, meta, g["effects"], g["labels"], extractions, rob_overall))
 
         # Primary = most-studied outcome (ties → first encountered).
         primary: Optional[MetaAnalysisResult] = None
@@ -305,7 +316,7 @@ class EvidenceSynthesizer(Agent):
             best_i = max(range(len(metas)), key=lambda i: metas[i].k_studies)
             # ``max`` already returns the first index on ties.
             primary = metas[best_i]
-            primary_row = grade_rows[best_i]
+            primary_row = grade_rows[best_i] if best_i < len(grade_rows) else None
 
         # Deterministic GRADE certainty from the primary outcome.
         det_certainty = primary_row.certainty if primary_row else ""
@@ -330,18 +341,34 @@ class EvidenceSynthesizer(Agent):
             "grade_rationale": {"type": "string"},
             "limitations": {"type": "string"},
         })
-        system = (
-            "You are writing the quantitative and narrative synthesis for a "
-            "PRISMA 2020 systematic review destined for a top computational-biology "
-            "journal. Write thorough, formal, multi-paragraph scientific prose. Walk "
-            "through EVERY meta-analysed outcome in turn: report the pooled effect, "
-            "confidence interval, heterogeneity (I² with its CI and τ²), the prediction "
-            "interval, any subgroup contrast, and publication-bias diagnostics, then "
-            "interpret them. Integrate the per-study evidence. The GRADE certainty has "
-            "ALREADY been computed deterministically and is provided to you — explain "
-            "WHY it is what it is in plain language, but DO NOT change it and DO NOT "
-            "invent any number beyond those supplied. Never overstate certainty."
-        )
+        if not quantitative:
+            kind = "scoping" if review_type == "scoping" else "qualitative"
+            system = (
+                f"You are writing the synthesis for a {kind} review. This review "
+                "does NOT pool effect estimates or grade certainty — do not report a "
+                "pooled effect, forest plot, GRADE rating or meta-analytic statistic. "
+                + ("Chart the evidence descriptively: summarise the range and nature "
+                   "of the included studies, the concepts they cover, and the gaps, "
+                   "following PRISMA-ScR." if kind == "scoping" else
+                   "Synthesise the findings thematically: identify the recurring "
+                   "themes across studies and how the evidence supports each.") +
+                " Write thorough, formal, multi-paragraph scientific prose grounded "
+                "strictly in the supplied per-study evidence. Invent no numbers."
+            )
+        else:
+            system = (
+                "You are writing the quantitative and narrative synthesis for a "
+                "systematic review prepared to journal standard. Write thorough, "
+                "formal, multi-paragraph scientific prose. Walk through EVERY "
+                "meta-analysed outcome in turn: report the pooled effect, confidence "
+                "interval, heterogeneity (I² with its CI and τ²), the prediction "
+                "interval, any subgroup contrast, and publication-bias diagnostics, "
+                "then interpret them. Integrate the per-study evidence. The GRADE "
+                "certainty has ALREADY been computed deterministically and is provided "
+                "to you — explain WHY it is what it is in plain language, but DO NOT "
+                "change it and DO NOT invent any number beyond those supplied. Never "
+                "overstate certainty."
+            )
         user = (
             f"REVIEW QUESTION: {self.protocol.question}\n"
             f"OUTCOMES META-ANALYSED: {n_outcomes}\n\n"

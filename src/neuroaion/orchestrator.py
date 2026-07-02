@@ -436,6 +436,13 @@ class Orchestrator:
         state.extractions = extractions
         ex_by_uid = {e.uid: e for e in extractions}
 
+        # Scoping reviews chart the evidence but do NOT appraise risk of bias
+        # (PRISMA-ScR) — skip the RoB pass for them.
+        if getattr(state.protocol, "review_type", "intervention") == "scoping":
+            self.log("      · scoping review — risk-of-bias appraisal not applicable "
+                     "(PRISMA-ScR); skipped.", state)
+            state.rob = []
+            return
         with ThreadPoolExecutor(max_workers=self.max_workers) as ex:
             robs = list(ex.map(
                 lambda rec: appraiser.assess(rec, ex_by_uid[rec.uid],
