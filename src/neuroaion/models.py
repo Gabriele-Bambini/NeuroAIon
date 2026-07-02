@@ -212,7 +212,15 @@ class EligibilityDecision(BaseModel):
 
 # ── Extraction & appraisal (PRISMA items 9–12) ───────────────────────────────
 class EffectEstimate(BaseModel):
-    """One quantitative result, normalised for meta-analysis."""
+    """One quantitative result, normalised for meta-analysis.
+
+    Whenever the study reports arm-level raw data (a 2×2 table, or means with
+    SDs/medians), the extractor records it in the ``raw_*`` fields below. The
+    effect and its standard error are then **recomputed from the raw data** by
+    :mod:`neuroaion.extraction_math` rather than trusting the paper's — or an
+    LLM's — arithmetic. ``estimate``/``ci``/``se`` are only kept verbatim when
+    no raw data is available.
+    """
     outcome: str = ""
     measure: str = "SMD"        # SMD | MD | OR | RR | HR | COR | PROP
     estimate: Optional[float] = None
@@ -223,6 +231,33 @@ class EffectEstimate(BaseModel):
     n_comparator: Optional[int] = None
     subgroup: Optional[str] = None       # subgroup label (for subgroup analysis)
     moderator: Optional[float] = None    # covariate for meta-regression
+
+    # --- Raw arm-level data (binary 2×2) --------------------------------
+    events_intervention: Optional[int] = None   # a = events in intervention arm
+    events_comparator: Optional[int] = None      # c = events in comparator arm
+
+    # --- Raw arm-level data (continuous) --------------------------------
+    mean_intervention: Optional[float] = None
+    sd_intervention: Optional[float] = None
+    mean_comparator: Optional[float] = None
+    sd_comparator: Optional[float] = None
+
+    # --- Continuous summaries reported as medians (Wan/Luo/Hozo inputs) --
+    median_intervention: Optional[float] = None
+    q1_intervention: Optional[float] = None
+    q3_intervention: Optional[float] = None
+    min_intervention: Optional[float] = None
+    max_intervention: Optional[float] = None
+    median_comparator: Optional[float] = None
+    q1_comparator: Optional[float] = None
+    q3_comparator: Optional[float] = None
+    min_comparator: Optional[float] = None
+    max_comparator: Optional[float] = None
+
+    # --- Dispersion reported indirectly (recover an SD from these) -------
+    p_value: Optional[float] = None      # two-sided p for the group difference
+    provenance: str = ""                 # how estimate/se were obtained
+    recomputed: bool = False             # True once derived from raw data
 
 
 class ExtractionRecord(BaseModel):
