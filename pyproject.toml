@@ -28,8 +28,9 @@ figures = ["matplotlib>=3.8"]   # alias: forest/funnel/PRISMA/risk-of-bias figur
 oa = ["pypdf>=4.0"]            # optional Unpaywall -> OA PDF full-text extraction
 pdf = ["reportlab>=4.0"]      # native PDF output without a LaTeX engine
 pdf-extract = ["pymupdf>=1.24"]   # professional structured PDF content extraction
-dev = ["pytest>=8.0", "pymupdf>=1.24"]
-all = ["matplotlib>=3.8", "reportlab>=4.0", "pypdf>=4.0", "pymupdf>=1.24"]
+xlsx = ["openpyxl>=3.1"]      # per-source screening workbooks with affinity scores
+dev = ["pytest>=8.0", "pymupdf>=1.24", "openpyxl>=3.1"]
+all = ["matplotlib>=3.8", "reportlab>=4.0", "pypdf>=4.0", "pymupdf>=1.24", "openpyxl>=3.1"]
 
 [project.scripts]
 neuroaion = "neuroaion.cli:main"

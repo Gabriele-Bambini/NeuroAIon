@@ -230,6 +230,16 @@ class Orchestrator:
             for c in integ["failures"]:
                 self.log(f"⚠ Integrity check FAILED — {c['check']}: {c.get('detail')}", state)
 
+        # Per-source screening workbook with 1–10 PICO-affinity scores — the
+        # audit spreadsheet a human reviewer builds by hand from each database.
+        try:
+            from .export_xlsx import write_source_workbooks
+            wbs = write_source_workbooks(out_dir, state)
+            if wbs:
+                self.log(f"📊 Screening workbook written: {wbs[0].name}", state)
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Screening workbook skipped ({e}).", state)
+
         self.log("[8/8] PRISMAReporter · manuscript, figures, PDF/LaTeX/PROSPERO …", state)
         prose = PRISMAReporter(self.provider_for("reporter"), protocol).write_prose(state)
         report_path = write_artifacts(out_dir, state, prose)
