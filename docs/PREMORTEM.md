@@ -122,16 +122,23 @@ Everything below expands these into a per-dimension pre-mortem.
 
 ## Consolidated roadmap
 
-### P0 - blocks a complete, trustworthy review
-1. **Fail-closed autonomy** — raise on missing key unless `--allow-mock`.
-2. **Citation integrity spine** — `Record.ids` full capture -> union-find multi-ID dedup -> `verify_citations` gate.
-3. **Extraction recompute-from-raw** — raw-data fields + `extraction_math.py`; fix `body[:8000]`.
-4. **Fix PRISMA/full-text bug** — `orchestrator.py:318 -> ft.retrieved`; block abstract-only inclusion; raise 6000 cap.
-5. **Meta-analysis inferential integrity** — RVE/three-level; HKSJ SE floor; REML default; meta-regression; Q-profile tau^2 CI.
-6. **metafor-equivalence golden tests + runtime self-checks**.
-7. **Corpus canonicalization + numbering** — alphabetical `citation_numbers` used by all renderers.
-8. **Scoping-informed PICO** — `ScopingAgent` + `refine()` + `derive_keywords()`.
-9. **Excel-per-source workbook + affinity 1-10**.
+### P0 - blocks a complete, trustworthy review — ✅ COMPLETE
+1. ✅ **Fail-closed autonomy** — raise on missing key unless `--allow-mock` (also in `ask`).
+2. ✅ **Citation integrity spine** — `Record.ids` captured in every connector -> union-find multi-ID dedup -> `verify_citations` gate, run **before** synthesis so forest/GRADE/references share one verified set.
+3. ✅ **Extraction recompute-from-raw** — raw-data fields + `extraction_math.py` (Sweeting, Hedges g, Wan/Luo, SD-from-p/SE/CI); results/tables-anchored window replaces `body[:8000]`.
+4. ✅ **Fix PRISMA/full-text bug** — `decision.full_text_retrieved = ft.retrieved`; abstract-only inclusion blocked.
+5. ✅ **Meta-analysis inferential integrity** — REML default; HKSJ SE floor; meta-regression; Q-profile τ² CI; analysis-scale transforms for PROP (logit) / COR (Fisher-z); non-finite guard; unsupported-measure refusal; double-zero exclusion; mixed-measure coherence.
+6. ✅ **metafor-equivalence golden tests + runtime self-checks** — `test_metafor_golden.py`; `checks.py` PRISMA-ledger (with independent cross-checks) + grounding (incl. forest-in-corpus).
+7. ✅ **Corpus canonicalization + numbering** — alphabetical `citation_numbers` used by all renderers.
+8. ✅ **Scoping-informed PICO** — `ScopingAgent` (probe -> synonym clusters + criteria) + `ProtocolArchitect.derive_pico` (question -> PICO).
+9. ✅ **Excel-per-source workbook + affinity 1-10** — `export_xlsx.py` (openpyxl, CSV fallback).
+
+### P0.5 - hardening from the 5-agent adversarial review — ✅ COMPLETE
+- ✅ **De-branding of every output artefact** — no product/agent/AI-vendor name in manifest, audit trail, checklist, references, or manuscript (`test_debranding.py` scans a full run).
+- ✅ **Review-type awareness** — `ReviewProtocol.review_type`; RoB instrument auto-selected per design (RoB2/ROBINS-I/QUADAS-2/ROBINS-E/NOS); GRADE/meta/RoB gated (scoping & qualitative are descriptive; `RoBConfig.grade` honoured).
+- ✅ **Question-first tool** — `neuroaion ask "<question>"` runs the whole pipeline end to end.
+- ✅ **Dedup safety** — fuzzy title merge requires near-identical title OR high-similarity + same year AND author (no silent study loss).
+- ✅ **Demo exercises meta/forest/GRADE** — field-aware mock provider.
 
 ### P1 - reviewer-grade quality
 Self-critique/refinement loop; chunked long-text reading; determinism (temp/seed + provenance); reviewer diversity/self-consistency + calibrated affinity + controlled exclusion vocab + PRISMA other-methods arm; dual extraction + reconciliation + SD imputation + page/quote traceability; PM/SJ, PET-PEESE, excess-significance, influence+Baujat, cumulative MA, MH/Peto+Sweeting, GRADE OIS; `models.Claim` + `knowledge_graph.py` + KG-grounded fully-cited prose; DOI validation + metadata reconciliation + author normalization + manifest reproducibility; chaptered intro + in-paper SoF/subgroup/sensitivity + all-outcome loops; dependency pinning + CI on push/PR + determinism test; live Embase/CENTRAL/Scopus/WoS via institutional keys.
