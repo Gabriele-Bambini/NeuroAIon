@@ -7,42 +7,63 @@ from neuroaion.checks import (
 )
 from neuroaion.models import (
     EffectEstimate,
+    EligibilityDecision,
     ExtractionRecord,
     MetaAnalysisResult,
     PrismaFlow,
     Record,
     ReviewProtocol,
     ReviewState,
+    ScreeningDecision,
     Synthesis,
 )
+from neuroaion.prisma import compute_flow
 
 
-def _balanced_flow():
-    # 100 identified → 20 dups → 80 screened → 60 excluded, 20 sought →
-    # 2 not-retrieved, 18 assessed → 8 excluded, 10 included.
-    return PrismaFlow(
-        records_total=100, records_from_databases=100, records_from_registers=0,
-        duplicates_removed=20, records_screened=80, records_excluded_screening=60,
-        reports_sought=20, reports_not_retrieved=2, reports_assessed=18,
-        reports_excluded={"Wrong population": 5, "Wrong design": 3},
-        studies_included=10, reports_of_included=10)
+def _consistent_state():
+    """A fully-consistent state whose PRISMA flow is derived from its own lists.
+
+    100 identified (20 duplicates) → 80 unique/screened → 20 screened-in → 18
+    reports assessed (2 not retrieved) → 8 excluded with reasons → 10 included.
+    """
+    records = [Record(source="pubmed", doi=f"10/a{i}", title=f"Study {i}") for i in range(100)]
+    # 20 of them are exact duplicates (share a DOI) so dedup removes 20.
+    for i in range(80, 100):
+        records[i].doi = records[i - 80].doi
+    st = ReviewState(run_id="t", protocol=ReviewProtocol(title="T"))
+    st.records = records
+    from neuroaion.dedup import deduplicate
+    st.unique_records, _ = deduplicate(records)
+    uids = [r.uid for r in st.unique_records]           # 80 unique
+    st.included_after_screening = uids[:20]
+    # 18 assessed (full text), 2 not retrieved; of the 18, 8 excluded, 10 included.
+    st.eligibility = []
+    for j, u in enumerate(uids[:20]):
+        retrieved = j < 18
+        eligible = 8 <= j < 18            # 10 eligible, 8 assessed-and-excluded
+        st.eligibility.append(EligibilityDecision(
+            uid=u, eligible=eligible, full_text_retrieved=retrieved,
+            exclusion_reason="" if eligible else "Wrong population"))
+    st.included_studies = [e.uid for e in st.eligibility if e.eligible]
+    st.prisma = compute_flow(st)
+    return st
 
 
 def test_ledger_balances_when_consistent():
-    st = ReviewState(run_id="t", protocol=ReviewProtocol(title="T"))
-    st.prisma = _balanced_flow()
+    st = _consistent_state()
     checks = check_prisma_ledger(st)
-    assert all(c["ok"] for c in checks)
+    assert all(c["ok"] for c in checks), [c for c in checks if not c["ok"]]
+    # The independent cross-checks actually ran (not just the tautological ones).
+    names = {c["check"] for c in checks}
+    assert "included_matches_included_studies" in names
 
 
-def test_ledger_catches_a_missing_record():
-    st = ReviewState(run_id="t", protocol=ReviewProtocol(title="T"))
-    f = _balanced_flow()
-    f.studies_included = 11          # one study appears from nowhere
-    st.prisma = f
-    checks = check_prisma_ledger(st)
-    bad = [c for c in checks if not c["ok"]]
-    assert bad and bad[0]["check"] == "eligibility_balance"
+def test_ledger_independent_check_catches_flow_divergence():
+    st = _consistent_state()
+    st.prisma.studies_included += 1        # flow diagram claims one extra study
+    checks = {c["check"]: c for c in check_prisma_ledger(st)}
+    # The independent cross-check against the actual included list fails.
+    assert not checks["included_matches_included_studies"]["ok"]
 
 
 def test_citation_numbering_is_alphabetical_and_stable():
@@ -75,14 +96,15 @@ def test_run_integrity_passes_on_clean_state():
     ok = Record(source="pubmed", doi="10/x", title="Extracted", authors=["Rossi A"], year=2020)
     ok2 = Record(source="pubmed", doi="10/y", title="Extracted 2", authors=["Bianchi B"], year=2021)
     st = ReviewState(run_id="t", protocol=ReviewProtocol(title="T"))
+    st.records = [ok, ok2]
     st.unique_records = [ok, ok2]
+    st.included_after_screening = [ok.uid, ok2.uid]
+    st.eligibility = [EligibilityDecision(uid=ok.uid, eligible=True, full_text_retrieved=True),
+                      EligibilityDecision(uid=ok2.uid, eligible=True, full_text_retrieved=True)]
     st.included_studies = [ok.uid, ok2.uid]
     st.extractions = [ExtractionRecord(uid=ok.uid, study_label="Rossi 2020"),
                       ExtractionRecord(uid=ok2.uid, study_label="Bianchi 2021")]
-    st.prisma = PrismaFlow(records_total=2, records_from_databases=2, duplicates_removed=0,
-                           records_screened=2, records_excluded_screening=0,
-                           reports_sought=2, reports_not_retrieved=0, reports_assessed=2,
-                           reports_excluded={}, studies_included=2, reports_of_included=2)
+    st.prisma = compute_flow(st)
     st.synthesis = Synthesis(meta_analysis=MetaAnalysisResult(
         measure="RR", k_studies=2, ci_lower=1.0, ci_upper=1.5,
         forest=[{"study": "Rossi 2020"}, {"study": "Bianchi 2021"}]))

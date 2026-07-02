@@ -83,6 +83,29 @@ def check_prisma_ledger(state: ReviewState) -> list[dict]:
     eq("eligibility_balance",
        sum(f.reports_excluded.values()) + f.studies_included, f.reports_assessed,
        "sum(reports_excluded) + studies_included = reports_assessed")
+
+    # Independent cross-checks: the reported flow numbers (which the figure and
+    # manuscript use) must match the source-of-truth state lists. Unlike the
+    # equations above — some of which compute_flow derives by subtraction and so
+    # can never fail — these compare two independently-produced quantities and
+    # therefore catch a genuine miscount or a divergence between the flow diagram
+    # and the underlying data.
+    eq("screened_matches_unique_records",
+       f.records_screened, len(state.unique_records),
+       "records_screened = len(unique_records)")
+    eq("sought_matches_screened_in",
+       f.reports_sought, len(state.included_after_screening),
+       "reports_sought = len(included_after_screening)")
+    eq("assessed_matches_eligibility_ledger",
+       f.reports_assessed, sum(1 for e in state.eligibility if e.full_text_retrieved),
+       "reports_assessed = eligibility rows with full text retrieved")
+    eq("included_matches_included_studies",
+       f.studies_included, len(state.included_studies),
+       "studies_included = len(included_studies)")
+    eq("excluded_reasons_match_eligibility",
+       sum(f.reports_excluded.values()),
+       sum(1 for e in state.eligibility if e.full_text_retrieved and not e.eligible),
+       "sum(reports_excluded) = eligibility rows assessed-and-excluded")
     return checks
 
 
