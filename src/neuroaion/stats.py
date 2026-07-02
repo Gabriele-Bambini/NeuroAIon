@@ -119,6 +119,141 @@ def tau2_REML(ys, vs, tol=1e-7, max_iter=200) -> float:
     return tau2
 
 
+def tau2_qprofile_ci(ys, vs, level=0.95):
+    """95% CI for τ² by the Q-profile method (Viechtbauer 2007).
+
+    Solves the generalized-Q estimating equation Q_gen(τ²) = χ²_{k-1; α} at the
+    two tail quantiles. This is the interval ``metafor`` reports as the
+    ``tau^2`` CI and is exact under the random-effects model, unlike Wald
+    intervals which misbehave near the τ²=0 boundary.
+    """
+    ys, vs = np.asarray(ys, float), np.asarray(vs, float)
+    k = len(ys)
+    df = k - 1
+    if df < 1:
+        return None, None
+
+    def q_gen(t2):
+        w = 1.0 / (vs + t2)
+        mu = np.sum(w * ys) / np.sum(w)
+        return float(np.sum(w * (ys - mu) ** 2))
+
+    alpha = 1.0 - level
+    q_lo = float(scipy_stats.chi2.ppf(alpha / 2, df))       # for the upper τ² bound
+    q_hi = float(scipy_stats.chi2.ppf(1 - alpha / 2, df))   # for the lower τ² bound
+
+    def solve(target):
+        # q_gen is strictly decreasing in τ²; bracket then bisect.
+        if q_gen(0.0) <= target:
+            return 0.0
+        lo, hi = 0.0, max(1.0, np.max(vs))
+        for _ in range(200):
+            if q_gen(hi) <= target:
+                break
+            hi *= 2
+            if hi > 1e12:
+                return None
+        for _ in range(200):
+            mid = 0.5 * (lo + hi)
+            if q_gen(mid) > target:
+                lo = mid
+            else:
+                hi = mid
+        return 0.5 * (lo + hi)
+
+    lower = solve(q_hi) or 0.0
+    upper = solve(q_lo)
+    return lower, upper
+
+
+def meta_regression(ys, vs, X, labels=None, tau2_method="REML", knha=True):
+    """Mixed-effects meta-regression by weighted least squares (Knapp-Hartung).
+
+    ``X`` is a list of moderator rows (an intercept column is prepended). τ² is
+    estimated once from the null model (method-of-moments residual heterogeneity)
+    and treated as known when fitting the coefficients — the standard
+    two-step mixed-effects approach. With ``knha`` the coefficient tests use the
+    Knapp-Hartung t-adjustment, which controls the type-I error far better than
+    the normal approximation.
+    """
+    ys = np.asarray(ys, float)
+    vs = np.asarray(vs, float)
+    X = np.asarray(X, float)
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+    n, p_cov = X.shape
+    Xd = np.column_stack([np.ones(n), X])
+    p = Xd.shape[1]
+    if n <= p:
+        return None
+    # Residual-heterogeneity τ². REML via Fisher scoring on the weighted
+    # residual-projection matrix P = W − WX(XᵀWX)⁻¹XᵀW (Viechtbauer 2005);
+    # method-of-moments (DerSimonian-Kacker) otherwise.
+    reml = tau2_method.upper() == "REML"
+    tau2 = 0.0
+    for _ in range(200):
+        w = 1.0 / (vs + tau2)
+        W = np.diag(w)
+        XtWX = Xd.T @ W @ Xd
+        XtWX_inv = np.linalg.pinv(XtWX)
+        P = W - W @ Xd @ XtWX_inv @ Xd.T @ W
+        if reml:
+            Py = P @ ys
+            num = float(Py @ Py) - float(np.trace(P))       # yᵀPPy − tr(P)
+            den = float(np.sum(P * P))                        # tr(PP), P symmetric
+            new = max(0.0, tau2 + num / den) if den > 1e-12 else tau2
+        else:
+            beta = XtWX_inv @ Xd.T @ W @ ys
+            resid = ys - Xd @ beta
+            rss = float(resid @ (w * resid))
+            trP = float(np.trace(P @ np.diag(vs)))
+            new = max(0.0, (rss - (n - p)) / max(trP, 1e-12))
+        if abs(new - tau2) < 1e-9:
+            tau2 = new
+            break
+        tau2 = new
+    w = 1.0 / (vs + tau2)
+    W = np.diag(w)
+    XtWX_inv = np.linalg.pinv(Xd.T @ W @ Xd)
+    beta = XtWX_inv @ Xd.T @ W @ ys
+    resid = ys - Xd @ beta
+    dfr = n - p
+    if knha:
+        s2 = float(resid @ (w * resid)) / dfr
+        cov = s2 * XtWX_inv
+        crit_dist, crit_df = "t", dfr
+    else:
+        cov = XtWX_inv
+        crit_dist, crit_df = "z", None
+    se = np.sqrt(np.clip(np.diag(cov), 0, None))
+    names = ["intercept"] + [f"beta{i+1}" for i in range(p_cov)]
+    coeffs = []
+    for name, b, s in zip(names, beta, se):
+        stat = b / s if s else 0.0
+        pval = float(2 * scipy_stats.t.sf(abs(stat), dfr)) if knha \
+            else float(2 * scipy_stats.norm.sf(abs(stat)))
+        coeffs.append({"term": name, "estimate": round(float(b), 4),
+                       "se": round(float(s), 4), "stat": round(float(stat), 4),
+                       "p": round(pval, 4)})
+    # Omnibus test of the moderators (all slopes = 0).
+    QM = QM_p = None
+    if p_cov >= 1:
+        Bs = beta[1:]
+        Cov_s = cov[1:, 1:]
+        try:
+            QM = float(Bs @ np.linalg.solve(Cov_s, Bs))
+            if knha:
+                QM /= p_cov
+                QM_p = float(scipy_stats.f.sf(QM, p_cov, dfr))
+            else:
+                QM_p = float(scipy_stats.chi2.sf(QM, p_cov))
+        except np.linalg.LinAlgError:
+            pass
+    return {"coefficients": coeffs, "tau2": round(tau2, 4), "test_dist": crit_dist,
+            "df": crit_df, "QM": (round(QM, 3) if QM is not None else None),
+            "QM_p": (round(QM_p, 5) if QM_p is not None else None), "k": n}
+
+
 def _pool(ys, vs, *, model="random", tau2_method="DL", knha=False) -> dict:
     ys, vs = np.asarray(ys, float), np.asarray(vs, float)
     k = len(ys)
@@ -270,15 +405,16 @@ def trim_and_fill(ys, vs, *, model="random", tau2_method="DL", max_iter=100):
 def meta_analyze(effects, *, measure="SMD", model="random", labels=None,
                  tau2_method="REML", knha=False, prediction_interval_=True,
                  subgroup=False, leave_one_out_=False, publication_bias=False,
-                 outcome="") -> Optional[MetaAnalysisResult]:
+                 moderator=False, outcome="") -> Optional[MetaAnalysisResult]:
     labels = labels or [f"study {i+1}" for i in range(len(effects))]
-    rows, used, groups = [], [], []
+    rows, used, groups, mods = [], [], [], []
     for lab, e in zip(labels, effects):
         u = _usable(e)
         if u is not None:
             rows.append(u)
             used.append(lab)
             groups.append(getattr(e, "subgroup", None))
+            mods.append(getattr(e, "moderator", None))
     k = len(rows)
     if k == 0:
         return None
@@ -315,6 +451,13 @@ def meta_analyze(effects, *, measure="SMD", model="random", labels=None,
         tau_squared=round(res["tau2"], 4), tau=round(math.sqrt(res["tau2"]), 4),
         H=round(het["H"], 3), forest=forest)
 
+    if model == "random" and k >= 2:
+        t2_lo, t2_hi = tau2_qprofile_ci(ys, vs)
+        if t2_lo is not None:
+            out.tau_squared_ci_lower = round(t2_lo, 4)
+        if t2_hi is not None:
+            out.tau_squared_ci_upper = round(t2_hi, 4)
+
     if prediction_interval_ and model == "random":
         pl, pu = prediction_interval(res["estimate"], se_re, res["tau2"], k)
         if pl is not None:
@@ -324,6 +467,12 @@ def meta_analyze(effects, *, measure="SMD", model="random", labels=None,
         sg = subgroup_analysis(ys, vs, groups, model=model, tau2_method=tau2_method, knha=knha, bt=bt)
         out.subgroups, out.q_between = sg["subgroups"], sg["q_between"]
         out.q_between_df, out.q_between_p = sg["q_between_df"], sg["q_between_p"]
+    if moderator and sum(m is not None for m in mods) >= k and k >= 4:
+        idx = [i for i, m in enumerate(mods) if m is not None]
+        mr = meta_regression([ys[i] for i in idx], [vs[i] for i in idx],
+                             [[mods[i]] for i in idx], tau2_method=tau2_method, knha=knha)
+        if mr is not None:
+            out.metareg = mr
     if leave_one_out_ and k >= 3:
         out.leave_one_out = leave_one_out(ys, vs, used, model=model, tau2_method=tau2_method, knha=knha, bt=bt)
     if publication_bias and k >= 3:

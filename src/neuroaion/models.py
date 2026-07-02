@@ -322,6 +322,8 @@ class MetaAnalysisResult(BaseModel):
     q_p_value: Optional[float] = None
     i_squared_ci_lower: Optional[float] = None
     i_squared_ci_upper: Optional[float] = None
+    tau_squared_ci_lower: Optional[float] = None   # Q-profile (Viechtbauer 2007)
+    tau_squared_ci_upper: Optional[float] = None
     # 95% prediction interval (Higgins-Thompson-Spiegelhalter).
     pi_lower: Optional[float] = None
     pi_upper: Optional[float] = None

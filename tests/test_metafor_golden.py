@@ -6,8 +6,16 @@ BCG-vaccine dataset (Colditz 1994; `metafor::dat.bcg`), log-risk-ratio.
 """
 import math
 
+from scipy import stats as _st
+
 from neuroaion.models import EffectEstimate
-from neuroaion.stats import meta_analyze, hedges_g, log_or
+from neuroaion.stats import (
+    hedges_g,
+    log_or,
+    meta_analyze,
+    meta_regression,
+    tau2_qprofile_ci,
+)
 
 # dat.bcg: tpos, tneg, cpos, cneg (13 trials)
 BCG = [(4, 119, 11, 128), (6, 300, 29, 274), (3, 228, 11, 209),
@@ -15,6 +23,16 @@ BCG = [(4, 119, 11, 128), (6, 300, 29, 274), (3, 228, 11, 209),
        (8, 2537, 10, 619), (505, 87886, 499, 87892), (29, 7470, 45, 7232),
        (17, 1699, 65, 1600), (186, 50448, 141, 27197), (5, 2493, 3, 2338),
        (27, 16886, 29, 17825)]
+# Absolute latitude of each trial (metafor::dat.bcg$ablat) — a classic moderator.
+ABLAT = [44, 55, 42, 52, 13, 44, 19, 13, 27, 42, 18, 33, 33]
+
+
+def _bcg_yi_vi():
+    ys, vs = [], []
+    for tp, tn, cp, cn in BCG:
+        ys.append(math.log((tp / (tp + tn)) / (cp / (cp + cn))))
+        vs.append(1 / tp - 1 / (tp + tn) + 1 / cp - 1 / (cp + cn))
+    return ys, vs
 
 
 def _bcg_effects():
@@ -83,3 +101,48 @@ def test_log_or_2x2():
     y, v = log_or(20, 10, 12, 18)
     assert abs(y - math.log(3.0)) < 1e-9
     assert abs(v - (1 / 20 + 1 / 10 + 1 / 12 + 1 / 18)) < 1e-9
+
+
+def test_tau2_qprofile_ci_matches_estimating_equation():
+    # The Q-profile CI (metafor confint default) solves Q_gen(tau^2)=chi2 quantiles
+    # exactly; for dat.bcg the lower bound is 0.1197.
+    ys, vs = _bcg_yi_vi()
+    import numpy as np
+    lo, hi = tau2_qprofile_ci(ys, vs)
+
+    def q_gen(t2):
+        w = 1.0 / (np.asarray(vs) + t2)
+        mu = np.sum(w * np.asarray(ys)) / np.sum(w)
+        return float(np.sum(w * (np.asarray(ys) - mu) ** 2))
+
+    assert abs(q_gen(lo) - float(_st.chi2.ppf(0.975, 12))) < 1e-4
+    assert abs(q_gen(hi) - float(_st.chi2.ppf(0.025, 12))) < 1e-4
+    assert abs(lo - 0.1197) < 5e-3
+    assert lo < 0.3132 < hi          # the REML point estimate lies inside the CI
+
+
+def test_meta_regression_ablat_matches_metafor():
+    # metafor rma(measure="RR", mods=~ablat, method="REML"):
+    # intrcpt 0.2515 (se 0.2491); ablat -0.0292 (se 0.0072); tau^2 0.0764; QM p<1e-3.
+    ys, vs = _bcg_yi_vi()
+    mr = meta_regression(ys, vs, [[a] for a in ABLAT], tau2_method="REML", knha=False)
+    coef = {c["term"]: c for c in mr["coefficients"]}
+    assert abs(coef["intercept"]["estimate"] - 0.2515) < 2e-3
+    assert abs(coef["intercept"]["se"] - 0.2491) < 2e-3
+    assert abs(coef["beta1"]["estimate"] - (-0.0292)) < 2e-3
+    assert abs(mr["tau2"] - 0.0764) < 3e-3
+    assert mr["QM_p"] is not None and mr["QM_p"] < 1e-3
+
+
+def test_meta_regression_wired_into_meta_analyze():
+    effs = []
+    for (tp, tn, cp, cn), ab in zip(BCG, ABLAT):
+        rr = (tp / (tp + tn)) / (cp / (cp + cn))
+        se = math.sqrt(1 / tp - 1 / (tp + tn) + 1 / cp - 1 / (cp + cn))
+        effs.append(EffectEstimate(measure="RR", estimate=rr, se=se, moderator=float(ab)))
+    m = meta_analyze(effs, measure="RR", model="random", tau2_method="REML", moderator=True)
+    assert m.metareg is not None
+    slope = next(c for c in m.metareg["coefficients"] if c["term"] == "beta1")
+    assert abs(slope["estimate"] - (-0.0292)) < 3e-3
+    # tau^2 CI is populated on the main result too.
+    assert m.tau_squared_ci_lower is not None and m.tau_squared_ci_upper is not None
