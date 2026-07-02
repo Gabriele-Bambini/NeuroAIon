@@ -127,6 +127,25 @@ class SearchStrategy(BaseModel):
     notes: str = ""
 
 
+class ScopingResult(BaseModel):
+    """Output of the preliminary scoping search that refines the protocol.
+
+    A real review begins by *scoping* the literature — a quick probe to learn the
+    field's vocabulary, gauge how much evidence exists, spot seminal studies, and
+    sharpen the eligibility criteria — before committing to the full search. This
+    captures that step so the review genuinely starts from a question.
+    """
+    keyword_groups: list[list[str]] = Field(default_factory=list)  # synonym clusters
+    refined_inclusion: list[str] = Field(default_factory=list)
+    refined_exclusion: list[str] = Field(default_factory=list)
+    suggested_designs: list[str] = Field(default_factory=list)
+    date_from: Optional[str] = None
+    seed_studies: list[str] = Field(default_factory=list)          # key titles/DOIs found
+    estimated_volume: Optional[int] = None                         # hits in the probe
+    rationale: str = ""
+    probe_query: str = ""
+
+
 # ── Records (PRISMA items 8, 16) ─────────────────────────────────────────────
 class Record(BaseModel):
     """A single bibliographic record retrieved from a source."""
@@ -401,6 +420,7 @@ class ReviewState(BaseModel):
     mock: bool = False
     model: str = ""
     protocol: ReviewProtocol = Field(default_factory=ReviewProtocol)
+    scoping: Optional["ScopingResult"] = None
     strategy: SearchStrategy = Field(default_factory=SearchStrategy)
     records: list[Record] = Field(default_factory=list)
     unique_records: list[Record] = Field(default_factory=list)

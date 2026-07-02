@@ -30,8 +30,10 @@ class Orchestrator:
                  make_latex: bool = True, compile_pdf: bool = True,
                  make_bundle: bool = True, save_zip: Optional[str] = None,
                  stop_after: Optional[str] = None, from_state: Optional[ReviewState] = None,
+                 scoping: bool = True,
                  logger: Optional[Callable[[str], None]] = None):
         self.seed = seed
+        self.scoping_enabled = scoping
         # Mock only if explicitly requested, or if NO real provider is available
         # (neither an API key nor a bound cowork handler / queue). Cowork mode —
         # the pipeline driven by an agent on a subscription — is a real provider.
@@ -120,6 +122,11 @@ class Orchestrator:
         self.last_out_dir = out_dir
         self.log(f"Protocol: “{protocol.title}”. Question: {protocol.question}", state)
         self.log(f"Output folder: {out_dir}", state)
+
+        # Agent 0 — scoping probe: learn the field's vocabulary and sharpen the
+        # eligibility criteria before committing to the definitive search.
+        if self.scoping_enabled:
+            self._scope(state, protocol)
 
         # Agent 2 — search strategy + identification
         self.log("[2/8] SearchStrategist · search, identify & de-duplicate …", state)
@@ -280,6 +287,29 @@ class Orchestrator:
     def seed_protocol_stub(self):
         from .models import ReviewProtocol
         return ReviewProtocol(title=self.seed.get("title", ""))
+
+    def _scope(self, state: ReviewState, protocol) -> None:
+        """Run a small scoping probe and merge its findings into the protocol."""
+        from .agents.scoping import ScopingAgent
+        pico = protocol.pico
+        probe = " ".join(t for t in (pico.population, pico.intervention, pico.outcome) if t) \
+            or protocol.title
+        sample: list[Record] = []
+        try:
+            source = (protocol.search.sources or ["pubmed"])[0]
+            if self.live_sources:
+                sample = search_source(source, probe, retmax=25)
+            else:
+                sample = synthetic_records(source, probe, n=12)
+        except Exception as e:  # noqa: BLE001
+            self.log(f"      · scoping probe unavailable ({e}); refining from PICO only.", state)
+        agent = ScopingAgent(self.provider_for("protocol"), protocol)
+        result = agent.scope(sample, probe_query=probe)
+        agent.apply(protocol, result)
+        state.scoping = result
+        n_groups = len(result.keyword_groups)
+        self.log(f"[0/8] ScopingAgent · probed {len(sample)} records → "
+                 f"{n_groups} synonym cluster(s); criteria and vocabulary refined.", state)
 
     def _identify(self, state: ReviewState) -> list[Record]:
         records: list[Record] = []
