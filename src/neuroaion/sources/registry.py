@@ -73,7 +73,7 @@ def synthetic_records(source: str, query: str, n: int, seed_offset: int = 0) -> 
         year = rng.randint(2017, 2024)
         first = rng.choice(["Zhang", "Smith", "Nguyen", "Müller", "Rossi", "Kumar", "Silva", "Chen"])
         shared = i > 0 and rng.random() < 0.14   # ~1/7 share a DOI to exercise dedup
-        doi = f"10.1234/neuroaion.{(i - 1) if shared else i:04d}"
+        doi = f"10.5555/example.{(i - 1) if shared else i:04d}"
         out.append(Record(
             source=source, source_id=f"{source}-{i:04d}", doi=doi,
             title=f"{method} for {task}: a {design}",

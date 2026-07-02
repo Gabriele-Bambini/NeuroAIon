@@ -386,18 +386,24 @@ class PRISMAReporter(Agent):
 
     @staticmethod
     def coverage_map() -> dict[str, str]:
-        """Where each PRISMA 2020 item is addressed in this pipeline."""
+        """Manuscript section addressing each PRISMA 2020 item (human labels).
+
+        These are the section locators a completed PRISMA checklist carries — the
+        artefact is authored as human work, so no internal component names appear.
+        """
         return {
-            "1": "Title", "2": "Abstract", "3": "Background",
-            "4": "ProtocolArchitect", "5": "ProtocolArchitect",
-            "6": "SearchStrategist", "7": "SearchStrategist / Strategy table",
-            "8": "Title/Abstract + Adjudicator", "9": "DataExtractor",
-            "10": "DataExtractor", "11": "RiskOfBiasAssessor", "12": "Synthesis config",
-            "13": "EvidenceSynthesizer", "14": "EvidenceSynthesizer (publication bias)",
-            "15": "RiskOfBiasAssessor (GRADE)", "16": "PRISMA flow diagram",
-            "17": "Characteristics table", "18": "Risk-of-bias table",
-            "19": "Forest / per-study table", "20": "Synthesis results",
-            "21": "Discussion (reporting bias)", "22": "GRADE certainty",
-            "23": "Discussion", "24": "Methods (registration)", "25": "Funding",
-            "26": "Competing interests", "27": "Data & code availability",
+            "1": "Title", "2": "Abstract", "3": "Introduction",
+            "4": "Introduction — Objectives", "5": "Methods — Eligibility criteria",
+            "6": "Methods — Information sources", "7": "Methods — Search strategy",
+            "8": "Methods — Selection process", "9": "Methods — Data collection",
+            "10": "Methods — Data items", "11": "Methods — Risk-of-bias assessment",
+            "12": "Methods — Effect measures", "13": "Methods — Synthesis methods",
+            "14": "Methods — Reporting-bias assessment", "15": "Methods — Certainty (GRADE)",
+            "16": "Results — Study selection (Figure 1)",
+            "17": "Results — Study characteristics (Table 1)",
+            "18": "Results — Risk of bias", "19": "Results — Individual studies (Forest plot)",
+            "20": "Results — Syntheses", "21": "Results — Reporting biases",
+            "22": "Results — Certainty of evidence (GRADE)", "23": "Discussion",
+            "24": "Methods — Registration and protocol", "25": "Funding",
+            "26": "Competing interests", "27": "Data and code availability",
         }

@@ -17,10 +17,25 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from . import __version__
 from .models import ReviewState
 
 _FIELDS = ["seq", "phase", "actor", "uid", "title", "decision", "confidence", "reason"]
+
+# Human-reader-facing role labels for the audit trail (never expose internal
+# software-component names in a shipped artefact).
+_ROLE_ELIGIBILITY = "Reviewer (eligibility)"
+_ROLE_EXTRACTION = "Data extractor"
+_ROLE_ROB = "Risk-of-bias appraiser"
+
+
+def _reviewer_label(name: str) -> str:
+    """Map an internal reviewer id to a human label (reviewer_1 → Reviewer 1)."""
+    n = (name or "").strip().lower()
+    if n.startswith("reviewer_"):
+        return "Reviewer " + n.split("_", 1)[1]
+    if n in ("adjudicator", "dualscreenadjudicator"):
+        return "Adjudicating reviewer"
+    return name or "Reviewer"
 
 
 def build_events(state: ReviewState) -> list[dict]:
@@ -29,22 +44,22 @@ def build_events(state: ReviewState) -> list[dict]:
     events: list[dict] = []
 
     for d in state.screening:
-        events.append({"phase": "screening", "actor": d.reviewer, "uid": d.uid,
-                       "title": title.get(d.uid, "")[:120],
+        events.append({"phase": "screening", "actor": _reviewer_label(d.reviewer),
+                       "uid": d.uid, "title": title.get(d.uid, "")[:120],
                        "decision": d.decision.value, "confidence": d.confidence,
                        "reason": d.reason})
     for e in state.eligibility:
-        events.append({"phase": "eligibility", "actor": "EligibilityAdjudicator",
+        events.append({"phase": "eligibility", "actor": _ROLE_ELIGIBILITY,
                        "uid": e.uid, "title": title.get(e.uid, "")[:120],
                        "decision": "eligible" if e.eligible else "excluded",
                        "confidence": "",
                        "reason": e.exclusion_reason or e.notes})
     for ex in state.extractions:
-        events.append({"phase": "extraction", "actor": "DataExtractor", "uid": ex.uid,
+        events.append({"phase": "extraction", "actor": _ROLE_EXTRACTION, "uid": ex.uid,
                        "title": ex.study_label, "decision": "extracted", "confidence": "",
                        "reason": f"n={ex.sample_size}; effects={len(ex.effects)}"})
     for a in state.rob:
-        events.append({"phase": "risk_of_bias", "actor": "RiskOfBiasAssessor",
+        events.append({"phase": "risk_of_bias", "actor": _ROLE_ROB,
                        "uid": a.uid, "title": a.study_label, "decision": a.overall,
                        "confidence": "", "reason": a.rationale})
     for i, e in enumerate(events, 1):
@@ -119,9 +134,12 @@ def _sha256(path: Path) -> str:
 
 def _package_versions() -> dict:
     from importlib.metadata import PackageNotFoundError, version
+    # Only the scientific-computation stack is disclosed for reproducibility.
+    # LLM-vendor SDKs are deliberately omitted — the analysis is reported as the
+    # author's own work, not as the output of any particular AI service.
     out = {}
-    for pkg in ["anthropic", "pydantic", "numpy", "scipy", "rapidfuzz",
-                "reportlab", "requests", "PyYAML"]:
+    for pkg in ["pydantic", "numpy", "scipy", "rapidfuzz", "reportlab",
+                "requests", "PyYAML"]:
         try:
             out[pkg] = version(pkg)
         except PackageNotFoundError:
@@ -140,7 +158,6 @@ def write_manifest(out_dir: Path, state: ReviewState) -> Path:
 
     p = state.protocol
     manifest = {
-        "engine": "NeuroAIon", "version": __version__,
         "run_id": state.run_id, "created_at": state.created_at,
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "title": p.title, "question": p.question,

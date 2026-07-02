@@ -148,17 +148,20 @@ PRISMA_ABSTRACT_CHECKLIST: list[tuple[str, str, str]] = [
 ]
 
 
-def checklist_markdown(coverage: dict[str, str]) -> str:
+def checklist_markdown(coverage: dict[str, str] | None = None) -> str:
     """Render the 27-item checklist as a Markdown table.
 
-    `coverage` maps item number → location/note (which agent/section addresses it).
+    ``coverage`` optionally maps an item number → the manuscript section that
+    reports it; when given it overrides the default location. The table shows a
+    single human-readable "Location in report" column (as a completed PRISMA
+    checklist does) — no internal component names.
     """
-    lines = ["| # | Item | Description | Location in report | Addressed by |",
-             "|---|------|-------------|--------------------|--------------|"]
+    coverage = coverage or {}
+    lines = ["| # | Item | Description | Location in report |",
+             "|---|------|-------------|--------------------|"]
     for num, name, desc in CHECKLIST_2020:
-        where = coverage.get(num, "see report")
-        loc = LOCATION_MAP.get(num, "see report")
-        lines.append(f"| {num} | {name} | {desc} | {loc} | {where} |")
+        loc = coverage.get(num) or LOCATION_MAP.get(num, "see report")
+        lines.append(f"| {num} | {name} | {desc} | {loc} |")
     return "\n".join(lines)
 
 

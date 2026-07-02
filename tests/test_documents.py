@@ -84,7 +84,13 @@ def test_audit_trail_and_manifest(tmp_path):
     documents.write_documents(tmp_path, st)
     m = audit.write_manifest(tmp_path, st)
     data = json.loads(m.read_text())
-    assert data["engine"] == "NeuroAIon"
+    # De-branded: no product name, version, or LLM-vendor SDK leaks into the manifest.
+    blob = m.read_text().lower()
+    assert "engine" not in data and "neuroaion" not in blob
+    assert "anthropic" not in blob and "openai" not in blob
+    # Audit-trail actors are human role labels, not software-component names.
+    actors = {e["actor"] for e in events}
+    assert not ({"DataExtractor", "RiskOfBiasAssessor", "EligibilityAdjudicator"} & actors)
     assert data["integrity"]["algorithm"] == "sha256"
     assert data["integrity"]["files"]                      # non-empty checksum set
     assert "manifest.json" not in data["integrity"]["files"]

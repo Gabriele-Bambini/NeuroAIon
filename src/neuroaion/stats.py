@@ -58,13 +58,31 @@ def logit_prop(events, n):
     return float(math.log(p / (1 - p))), float(1.0 / (nn * p) + 1.0 / (nn * (1 - p)))
 
 
-def _backtransform(measure: str):
+def _analysis_scale(measure: str) -> str:
+    """The scale on which a measure is *pooled* (may differ from how it is reported).
+
+    Ratios pool on the log scale, proportions on the logit scale, correlations on
+    Fisher's z. Everything else (MD, SMD, RD) pools as reported. Pooling a
+    proportion or a correlation on its raw scale is a classic, silent error — the
+    variance is not stabilised and the CI can leave [0,1] or [-1,1].
+    """
     m = (measure or "").upper()
     if m in RATIO:
-        return math.exp
-    if m in {"COR", "R"}:
-        return math.tanh
+        return "log"
     if m in {"PROP", "PROPORTION"}:
+        return "logit"
+    if m in {"COR", "R"}:
+        return "ztrans"
+    return "identity"
+
+
+def _backtransform(measure: str):
+    scale = _analysis_scale(measure)
+    if scale == "log":
+        return math.exp
+    if scale == "ztrans":
+        return math.tanh
+    if scale == "logit":
         return lambda x: 1.0 / (1.0 + math.exp(-x))
     return lambda x: x
 
@@ -74,21 +92,62 @@ def _se_from_ci(lo: float, hi: float) -> float:
     return (hi - lo) / (2 * 1.959963985)
 
 
+def _logit(p: float) -> float:
+    return math.log(p / (1.0 - p))
+
+
 def _usable(e: EffectEstimate) -> Optional[tuple[float, float]]:
+    """Return (effect, se) transformed onto the measure's *analysis* scale.
+
+    The reported estimate/CI/SE are converted to the pooling scale (log for
+    ratios, logit for proportions, Fisher-z for correlations) so the pool, its
+    CI and every sensitivity analysis operate on the variance-stabilised scale;
+    the forest and pooled point are back-transformed for display via
+    ``_backtransform``. Returns ``None`` when the record cannot be used (missing
+    estimate, non-positive SE, out-of-range proportion/correlation).
+    """
     if e.estimate is None:
         return None
     est, se = float(e.estimate), e.se
-    ratio = e.measure.upper() in RATIO
-    if se is None and e.ci_lower is not None and e.ci_upper is not None:
-        if ratio:
+    scale = _analysis_scale(e.measure)
+
+    if scale == "log":
+        if se is None and e.ci_lower is not None and e.ci_upper is not None:
             if e.ci_lower <= 0 or e.ci_upper <= 0 or est <= 0:
                 return None
             return math.log(est), _se_from_ci(math.log(e.ci_lower), math.log(e.ci_upper))
+        if se is None or se <= 0:
+            return None
+        return (math.log(est), se) if est > 0 else None
+
+    if scale == "logit":
+        if not (0.0 < est < 1.0):                       # a proportion must be in (0,1)
+            return None
+        if se is None and e.ci_lower is not None and e.ci_upper is not None:
+            if not (0.0 < e.ci_lower < 1.0 and 0.0 < e.ci_upper < 1.0):
+                return None
+            return _logit(est), _se_from_ci(_logit(e.ci_lower), _logit(e.ci_upper))
+        if se is None or se <= 0:
+            return None
+        return _logit(est), se / (est * (1.0 - est))    # delta-method SE on logit
+
+    if scale == "ztrans":
+        if not (-1.0 < est < 1.0):
+            return None
+        z = math.atanh(est)
+        if se is None and e.ci_lower is not None and e.ci_upper is not None:
+            if not (-1.0 < e.ci_lower < 1.0 and -1.0 < e.ci_upper < 1.0):
+                return None
+            return z, _se_from_ci(math.atanh(e.ci_lower), math.atanh(e.ci_upper))
+        if se is None or se <= 0:
+            return None
+        return z, se / (1.0 - est ** 2)                 # delta-method SE on Fisher-z
+
+    # identity scale (MD, SMD, RD, …)
+    if se is None and e.ci_lower is not None and e.ci_upper is not None:
         se = _se_from_ci(e.ci_lower, e.ci_upper)
     if se is None or se <= 0:
         return None
-    if ratio:
-        return (math.log(est), se) if est > 0 else None
     return est, se
 
 
@@ -420,8 +479,7 @@ def meta_analyze(effects, *, measure="SMD", model="random", labels=None,
         return None
     ys = [r[0] for r in rows]
     vs = [r[1] ** 2 for r in rows]
-    bt = _backtransform(measure)
-    log_scale = measure.upper() in RATIO
+    bt = _backtransform(measure)   # inverse of the analysis-scale transform
 
     res = _pool(ys, vs, model=model, tau2_method=tau2_method, knha=knha)
     het = _heterogeneity(res["Q"], res["Q_df"], k)
@@ -431,10 +489,12 @@ def meta_analyze(effects, *, measure="SMD", model="random", labels=None,
     wsum = sum(1.0 / s for s in vs)
     for lab, (y, se) in zip(used, rows):
         lo, hi = y - 1.96 * se, y + 1.96 * se
+        # Display each study on its natural scale by back-transforming the
+        # analysis-scale (log / logit / Fisher-z) estimate and CI.
         forest.append({"study": lab,
-                       "estimate": round(math.exp(y) if log_scale else y, 4),
-                       "ci_lower": round(math.exp(lo) if log_scale else lo, 4),
-                       "ci_upper": round(math.exp(hi) if log_scale else hi, 4),
+                       "estimate": round(bt(y), 4),
+                       "ci_lower": round(bt(lo), 4),
+                       "ci_upper": round(bt(hi), 4),
                        "weight_pct": round(100 * (1.0 / se ** 2) / wsum, 1)})
 
     out = MetaAnalysisResult(
@@ -511,12 +571,14 @@ def cohen_kappa(a: list[str], b: list[str]) -> Optional[float]:
 def funnel_points(effects: list[EffectEstimate], measure: str = "SMD") -> list[dict]:
     """Per-study (effect, se) pairs for a funnel plot, on the analysis scale."""
     out = []
-    log_scale = measure.upper() in RATIO
+    bt = _backtransform(measure)
     for e in effects:
         u = _usable(e)
         if u is not None:
             y, se = u
-            out.append({"estimate": round(math.exp(y) if log_scale else y, 4), "se": round(se, 4)})
+            # se stays on the analysis scale (funnel y-axis); estimate is shown
+            # on the natural scale.
+            out.append({"estimate": round(bt(y), 4), "se": round(se, 4)})
     return out
 
 
