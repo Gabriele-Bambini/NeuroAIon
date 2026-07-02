@@ -214,8 +214,22 @@ class Orchestrator:
             keep = set(u for u in state.included_studies if u not in set(unresolved))
             state.included_studies = [u for u in state.included_studies if u in keep]
 
-        # PRISMA flow + Agent 10 — reporting
+        # Canonical corpus numbering (stable, alphabetical) — the included set
+        # is now final, so every downstream citation resolves to a fixed number.
+        from .checks import assign_citation_numbers, run_integrity
+        assign_citation_numbers(state)
+
+        # PRISMA flow + runtime self-audit (ledger balance + grounding). A review
+        # that does not reconcile is flagged loudly rather than shipped silently.
         state.prisma = compute_flow(state)
+        integ = run_integrity(state)
+        if integ["passed"]:
+            self.log(f"✓ Integrity self-audit passed ({integ['n_checks']} checks: "
+                     f"PRISMA ledger balanced, all claims grounded).", state)
+        else:
+            for c in integ["failures"]:
+                self.log(f"⚠ Integrity check FAILED — {c['check']}: {c.get('detail')}", state)
+
         self.log("[8/8] PRISMAReporter · manuscript, figures, PDF/LaTeX/PROSPERO …", state)
         prose = PRISMAReporter(self.provider_for("reporter"), protocol).write_prose(state)
         report_path = write_artifacts(out_dir, state, prose)

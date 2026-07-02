@@ -413,4 +413,9 @@ class ReviewState(BaseModel):
     rob: list[RoBAssessment] = Field(default_factory=list)
     synthesis: Synthesis = Field(default_factory=Synthesis)
     prisma: PrismaFlow = Field(default_factory=PrismaFlow)
+    # Canonical corpus numbering: uid → citation number [1..N], assigned once the
+    # included set is final (alphabetical by first author, then year, then title).
+    citation_numbers: dict[str, int] = Field(default_factory=dict)
+    # Runtime self-audit: PRISMA-ledger balance + grounding checks (see checks.py).
+    integrity: dict[str, Any] = Field(default_factory=dict)
     log: list[str] = Field(default_factory=list)
