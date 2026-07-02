@@ -15,11 +15,39 @@ from rapidfuzz import fuzz
 
 from .models import Record
 
-_TITLE_THRESHOLD = 92  # token_sort_ratio above which two titles are "the same"
+# Fuzzy title matching is only used for records that carry NO identifier, where a
+# false merge silently deletes a study. So we require either a near-identical
+# title (formatting/punctuation differences only) OR a high similarity *plus* a
+# corroborating signal (same year or same first author) — this stops distinct
+# trials whose titles differ by one word ("drug X" vs "drug Y for depression",
+# ratio ~92) from being collapsed into one.
+_TITLE_NEAR_IDENTICAL = 99
+_TITLE_HIGH = 90
 
 
 def _norm_title(t: str) -> str:
     return re.sub(r"[^a-z0-9 ]", "", (t or "").lower()).strip()
+
+
+def _first_author_surname(r: Record) -> str:
+    if not r.authors:
+        return ""
+    first = r.authors[0].replace(",", " ").split()
+    return first[0].lower() if first else ""
+
+
+def _title_same_study(a: Record, b: Record, ratio: float) -> bool:
+    """True only if two id-less records almost certainly describe one study."""
+    if ratio >= _TITLE_NEAR_IDENTICAL:
+        return True                       # differ only by formatting/punctuation
+    if ratio >= _TITLE_HIGH:
+        # A one-word difference can separate two DISTINCT trials while scoring very
+        # high, so demand strong corroboration: same year AND same first author.
+        same_year = a.year is not None and a.year == b.year
+        sa, sb = _first_author_surname(a), _first_author_surname(b)
+        same_author = bool(sa) and sa == sb
+        return same_year and same_author
+    return False
 
 
 def _richness(r: Record) -> int:
@@ -79,15 +107,17 @@ def deduplicate(records: list[Record]) -> tuple[list[Record], int]:
             else:
                 id_owner[key] = i
 
-    # 2) Union DOI/id-less records to an existing one by fuzzy title.
+    # 2) Union id-less records to an existing one by fuzzy title + corroboration.
     titled: list[tuple[str, int]] = []
     for i, r in enumerate(records):
         nt = _norm_title(r.title)
         if not nt:
             continue
         if not r.id_keys():                # only fuzzy-merge when it has no id
-            match = next((j for t, j in titled
-                          if fuzz.token_sort_ratio(nt, t) >= _TITLE_THRESHOLD), None)
+            match = next(
+                (j for t, j in titled
+                 if _title_same_study(r, records[j], fuzz.token_sort_ratio(nt, t))),
+                None)
             if match is not None:
                 uf.union(i, match)
         titled.append((nt, i))

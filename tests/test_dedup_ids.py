@@ -40,3 +40,22 @@ def test_verify_citations_flags_unresolvable():
     unresolved = verify_citations(st)
     assert unresolved == [r_bad.uid]
     assert r_ok.has_resolvable_id() and not r_bad.has_resolvable_id()
+
+
+def test_no_false_merge_of_distinct_idless_studies():
+    # Two DIFFERENT trials, one word apart, no identifiers, different first author.
+    a = Record(source="s1", title="Drug X for major depression: a randomized trial",
+               authors=["Rossi A"], year=2019)
+    b = Record(source="s2", title="Drug Y for major depression: a randomized trial",
+               authors=["Bianchi B"], year=2021)
+    unique, removed = deduplicate([a, b])
+    assert removed == 0 and len(unique) == 2
+
+
+def test_high_similarity_plus_same_year_and_author_merges():
+    a = Record(source="s1", title="CADe for adenoma detection in colonoscopy",
+               authors=["Rossi A"], year=2020)
+    b = Record(source="s2", title="CADe for adenoma detection at colonoscopy",
+               authors=["Rossi A"], year=2020)
+    unique, removed = deduplicate([a, b])
+    assert removed == 1 and len(unique) == 1
