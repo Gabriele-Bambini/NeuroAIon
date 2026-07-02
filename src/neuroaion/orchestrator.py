@@ -203,6 +203,17 @@ class Orchestrator:
             self.log(f"Meta-analysis: pooled {m.measure}={m.pooled_estimate} "
                      f"[{m.ci_lower},{m.ci_upper}], I²={m.i_squared}%, k={m.k_studies}.", state)
 
+        # Citation-integrity gate: no included study may lack a resolvable id.
+        from .report import verify_citations
+        unresolved = verify_citations(state)
+        if unresolved:
+            self.log(f"⚠ Citation gate: {len(unresolved)} included studies lack a "
+                     f"resolvable identifier (DOI/PMID/PMCID/arXiv/URL): "
+                     f"{', '.join(unresolved[:5])}{'…' if len(unresolved) > 5 else ''}. "
+                     f"These are dropped from the verified reference set.", state)
+            keep = set(u for u in state.included_studies if u not in set(unresolved))
+            state.included_studies = [u for u in state.included_studies if u in keep]
+
         # PRISMA flow + Agent 10 — reporting
         state.prisma = compute_flow(state)
         self.log("[8/8] PRISMAReporter · manuscript, figures, PDF/LaTeX/PROSPERO …", state)

@@ -409,6 +409,16 @@ def write_latex(out_dir: Path, state: ReviewState, prose: dict[str, str]) -> Pat
     return tex_path
 
 
+def verify_citations(state: ReviewState) -> list[str]:
+    """Return the uids of included studies that lack ANY resolvable identifier
+    (DOI/PMID/PMCID/arXiv/URL). A non-empty result means the corpus contains a
+    citation that cannot be verified — the fail-closed gate before write-up.
+    """
+    by_uid = {r.uid: r for r in state.unique_records}
+    return [uid for uid in state.included_studies
+            if not (by_uid.get(uid) and by_uid[uid].has_resolvable_id())]
+
+
 def slugify(text: str, maxlen: int = 48) -> str:
     """A filesystem-friendly slug from a title (for human-readable run folders)."""
     import re

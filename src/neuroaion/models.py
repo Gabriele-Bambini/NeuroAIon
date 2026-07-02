@@ -145,13 +145,38 @@ class Record(BaseModel):
     pages: str = ""
     entry_type: str = "article"          # article | preprint | inproceedings | book | misc
     url: str = ""
+    # Every unique identifier we can capture, keyed by scheme: doi | pmid | pmcid |
+    # arxiv | openalex | s2 | isbn | nct | mag | dblp. Populated per source and
+    # unioned across sources during de-duplication so nothing is ever lost.
+    ids: dict[str, str] = Field(default_factory=dict)
+    found_by: list[str] = Field(default_factory=list)   # every source that returned it
+    retrieval_date: str = ""
     raw: dict[str, Any] = Field(default_factory=dict, repr=False)
+
+    def all_ids(self) -> dict[str, str]:
+        """Normalised {scheme: value} across the dedicated fields and ``ids``."""
+        out = {k: str(v).strip() for k, v in (self.ids or {}).items() if v}
+        if self.doi:
+            out.setdefault("doi", self.doi.lower().strip().replace("https://doi.org/", ""))
+        if self.pmid:
+            out.setdefault("pmid", str(self.pmid).strip())
+        return {k: v for k, v in out.items() if v}
+
+    def id_keys(self) -> set[str]:
+        """Canonical ``scheme:value`` keys used for identifier-based de-duplication."""
+        return {f"{k}:{v.lower()}" for k, v in self.all_ids().items()}
+
+    def has_resolvable_id(self) -> bool:
+        """True if this record can be cited to a verifiable locator."""
+        return bool(self.all_ids() or self.url)
 
     @property
     def uid(self) -> str:
-        """A stable identifier for the record (DOI if present, else title hash)."""
-        if self.doi:
-            return f"doi:{self.doi.lower().strip()}"
+        """A stable identifier: DOI, else PMID, else another id, else title hash."""
+        ids = self.all_ids()
+        for scheme in ("doi", "pmid", "pmcid", "arxiv", "openalex", "s2"):
+            if ids.get(scheme):
+                return f"{scheme}:{ids[scheme].lower()}"
         basis = (self.title or self.source_id or "").lower().strip()
         return "sha:" + hashlib.sha1(basis.encode("utf-8")).hexdigest()[:16]
 
