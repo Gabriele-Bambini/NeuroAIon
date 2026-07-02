@@ -73,6 +73,26 @@ def test_grounding_flags_unextracted_and_uncitable():
 
 def test_run_integrity_passes_on_clean_state():
     ok = Record(source="pubmed", doi="10/x", title="Extracted", authors=["Rossi A"], year=2020)
+    ok2 = Record(source="pubmed", doi="10/y", title="Extracted 2", authors=["Bianchi B"], year=2021)
+    st = ReviewState(run_id="t", protocol=ReviewProtocol(title="T"))
+    st.unique_records = [ok, ok2]
+    st.included_studies = [ok.uid, ok2.uid]
+    st.extractions = [ExtractionRecord(uid=ok.uid, study_label="Rossi 2020"),
+                      ExtractionRecord(uid=ok2.uid, study_label="Bianchi 2021")]
+    st.prisma = PrismaFlow(records_total=2, records_from_databases=2, duplicates_removed=0,
+                           records_screened=2, records_excluded_screening=0,
+                           reports_sought=2, reports_not_retrieved=0, reports_assessed=2,
+                           reports_excluded={}, studies_included=2, reports_of_included=2)
+    st.synthesis = Synthesis(meta_analysis=MetaAnalysisResult(
+        measure="RR", k_studies=2, ci_lower=1.0, ci_upper=1.5,
+        forest=[{"study": "Rossi 2020"}, {"study": "Bianchi 2021"}]))
+    assign_citation_numbers(st)
+    report = run_integrity(st)
+    assert report["passed"] and report["n_failures"] == 0
+
+
+def test_grounding_flags_forest_study_outside_corpus():
+    ok = Record(source="pubmed", doi="10/x", title="In corpus", authors=["Rossi A"], year=2020)
     st = ReviewState(run_id="t", protocol=ReviewProtocol(title="T"))
     st.unique_records = [ok]
     st.included_studies = [ok.uid]
@@ -83,7 +103,7 @@ def test_run_integrity_passes_on_clean_state():
                            reports_excluded={}, studies_included=1, reports_of_included=1)
     st.synthesis = Synthesis(meta_analysis=MetaAnalysisResult(
         measure="RR", k_studies=2, ci_lower=1.0, ci_upper=1.5,
-        forest=[{"study": "a"}, {"study": "b"}]))
+        forest=[{"study": "Rossi 2020"}, {"study": "Ghost 2019"}]))
     assign_citation_numbers(st)
-    report = run_integrity(st)
-    assert report["passed"] and report["n_failures"] == 0
+    checks = {c["check"]: c for c in check_grounding(st)}
+    assert not checks["meta_analysis[0]_forest_in_corpus"]["ok"]

@@ -196,10 +196,33 @@ class Orchestrator:
         self._eligibility(state)
         self.log(f"{len(state.included_studies)} studies eligible for inclusion.", state)
 
-        # Agents 7 & 8 — extraction + risk of bias
+        # Citation-integrity gate — run BEFORE synthesis so the forest plot,
+        # GRADE table and reference list are all built over the *same* verified
+        # set. A study lacking any resolvable identifier is reclassified as an
+        # eligibility exclusion ("no resolvable identifier") so the PRISMA ledger
+        # still balances, rather than silently vanishing.
+        from .report import verify_citations
+        unresolved = set(verify_citations(state))
+        if unresolved:
+            self.log(f"⚠ Citation gate: {len(unresolved)} otherwise-eligible studies lack a "
+                     f"resolvable identifier (DOI/PMID/PMCID/arXiv/URL) and are excluded "
+                     f"from the verified corpus.", state)
+            state.included_studies = [u for u in state.included_studies if u not in unresolved]
+            for e in state.eligibility:
+                if e.uid in unresolved and e.eligible:
+                    e.eligible = False
+                    e.exclusion_reason = "No resolvable identifier (unverifiable citation)"
+
+        # Agents 7 & 8 — extraction + risk of bias (on the verified included set)
         self.log("[5-6/8] DataExtractor & RiskOfBiasAssessor · on included studies …", state)
         self._extract_and_appraise(state)
         self._checkpoint(out_dir, state)
+
+        # Canonical corpus numbering (stable, alphabetical) — the included set is
+        # final before synthesis, so every citation resolves to a fixed number and
+        # the forest/reference list cannot drift.
+        from .checks import assign_citation_numbers, run_integrity
+        assign_citation_numbers(state)
 
         # Agent 9 — synthesis
         self.log("[7/8] EvidenceSynthesizer · synthesis, meta-analysis & publication bias …", state)
@@ -209,22 +232,6 @@ class Orchestrator:
             m = state.synthesis.meta_analysis
             self.log(f"Meta-analysis: pooled {m.measure}={m.pooled_estimate} "
                      f"[{m.ci_lower},{m.ci_upper}], I²={m.i_squared}%, k={m.k_studies}.", state)
-
-        # Citation-integrity gate: no included study may lack a resolvable id.
-        from .report import verify_citations
-        unresolved = verify_citations(state)
-        if unresolved:
-            self.log(f"⚠ Citation gate: {len(unresolved)} included studies lack a "
-                     f"resolvable identifier (DOI/PMID/PMCID/arXiv/URL): "
-                     f"{', '.join(unresolved[:5])}{'…' if len(unresolved) > 5 else ''}. "
-                     f"These are dropped from the verified reference set.", state)
-            keep = set(u for u in state.included_studies if u not in set(unresolved))
-            state.included_studies = [u for u in state.included_studies if u in keep]
-
-        # Canonical corpus numbering (stable, alphabetical) — the included set
-        # is now final, so every downstream citation resolves to a fixed number.
-        from .checks import assign_citation_numbers, run_integrity
-        assign_citation_numbers(state)
 
         # PRISMA flow + runtime self-audit (ledger balance + grounding). A review
         # that does not reconcile is flagged loudly rather than shipped silently.

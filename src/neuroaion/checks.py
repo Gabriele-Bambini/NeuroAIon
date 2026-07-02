@@ -108,6 +108,13 @@ def check_grounding(state: ReviewState) -> list[dict]:
 
     # 2) Each meta-analysis pooled over at least the number of studies it reports,
     #    and no forest row references a study outside the numbered corpus.
+    # Forest rows are labelled by study_label (or uid); map them back to a uid so
+    # we can confirm every plotted study is part of the citable, numbered corpus.
+    label_to_uid: dict[str, str] = {}
+    for ex in state.extractions:
+        label_to_uid[ex.study_label or ex.uid] = ex.uid
+        label_to_uid[ex.uid] = ex.uid
+    numbered = set(state.citation_numbers)
     analyses = list(syn.meta_analyses) if syn.meta_analyses else \
         ([syn.meta_analysis] if syn.meta_analysis else [])
     for i, m in enumerate(analyses):
@@ -120,6 +127,11 @@ def check_grounding(state: ReviewState) -> list[dict]:
                        "ok": (m.ci_lower is None or m.ci_upper is None
                               or m.ci_lower <= m.ci_upper),
                        "detail": f"[{m.ci_lower}, {m.ci_upper}]"})
+        orphans = [row.get("study") for row in m.forest
+                   if label_to_uid.get(row.get("study", "")) not in numbered]
+        checks.append({"check": f"meta_analysis[{i}]_forest_in_corpus",
+                       "ok": not orphans,
+                       "detail": [o for o in orphans if o][:10]})
     return checks
 
 
