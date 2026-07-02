@@ -23,7 +23,10 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--model", default=None, help=f"Model (default {config.DEFAULT_MODEL}).")
     run.add_argument("--workers", type=int, default=None, help="Concurrent screening workers.")
     run.add_argument("--mock", action="store_true",
-                     help="Force offline mock run (no API key, synthetic corpus).")
+                     help="Force offline mock run (tests/demos; synthetic placeholder text).")
+    run.add_argument("--allow-mock", action="store_true",
+                     help="Permit falling back to mock when no real provider is available "
+                          "(otherwise the run fails closed instead of fabricating a review).")
     run.add_argument("--live-sources", action="store_true",
                      help="Query real literature APIs even in mock mode.")
     run.add_argument("--no-fulltext", action="store_true",
@@ -32,7 +35,9 @@ def main(argv: list[str] | None = None) -> int:
                      help="Skip LaTeX paper generation.")
     run.add_argument("--no-pdf", action="store_true",
                      help="Generate paper.tex but do not attempt local PDF compilation.")
-    run.add_argument("--provider", help="LLM backend: anthropic | deepseek | openai | custom | mock.")
+    run.add_argument("--provider",
+                     help="LLM backend: anthropic | cowork | deepseek | openai | custom | mock. "
+                          "'cowork' = driven by the controlling agent on your subscription (no API key).")
     run.add_argument("--screen-provider",
                      help="Separate backend for the high-volume screening stage (e.g. deepseek).")
     run.add_argument("--screen-model", help="Model id for the screening provider (e.g. DeepSeek V4 Pro).")
@@ -105,9 +110,17 @@ def main(argv: list[str] | None = None) -> int:
             make_bundle=not args.no_bundle, save_zip=args.save_zip,
             stop_after=args.stop_after, from_state=from_state,
         )
+        # Fail closed: never fabricate a real-looking review with placeholder text.
+        if orch.mock and not (args.mock or args.allow_mock):
+            run.error(
+                "no LLM provider available — refusing to fabricate a review.\n"
+                "  • API mode:    set ANTHROPIC_API_KEY (or a DeepSeek/OpenAI key), or\n"
+                "  • Cowork mode: run under an agent on your subscription with "
+                "--provider cowork (bind llm.set_cowork_handler or set NEUROAION_COWORK_DIR), or\n"
+                "  • Testing:     pass --mock / --allow-mock to accept synthetic placeholder output.")
         if orch.mock:
-            print("ℹ  Running in MOCK mode (no ANTHROPIC_API_KEY). "
-                  "Set the key for a real, model-authored review.", file=sys.stderr)
+            print("ℹ  Running in MOCK mode — synthetic placeholder output, not a real review.",
+                  file=sys.stderr)
         orch.run(out_root=args.out)
         d = orch.last_out_dir
         if args.stop_after == "screen":

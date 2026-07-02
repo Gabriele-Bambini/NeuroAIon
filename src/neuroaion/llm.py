@@ -1,19 +1,26 @@
 """LLM provider abstraction.
 
-`AnthropicProvider` drives Claude Opus 4.8 with adaptive thinking, structured
-JSON outputs (``output_config.format``), prompt caching of the stable protocol
-context, and automatic retry. `MockProvider` synthesises schema-conforming
-responses deterministically so the entire pipeline can run full-auto with no
-API key — for testing, demos, and CI.
+Three ways to drive the pipeline:
+
+* ``AnthropicProvider`` / ``OpenAICompatibleProvider`` — direct API calls with an
+  API key (fully autonomous, unattended).
+* ``CoworkProvider`` — the pipeline delegates every LLM call to the *controlling
+  agent* (e.g. Claude Code running on the user's monthly subscription): no API
+  key, the orchestrating model IS the provider. A handler is injected via
+  :func:`set_cowork_handler`; a content-addressed on-disk request/response queue
+  is the batch fallback.
+* ``MockProvider`` — deterministic schema-valid placeholders for **tests / CI
+  only**. It never represents a real review and must be opted into explicitly.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import random
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
@@ -197,10 +204,10 @@ class MockProvider(LLMProvider):
 
     def complete_text(self, *, system, user, cache_prefix=None, max_tokens=16000):
         return (
-            "## Mock narrative\n\n"
-            "This text was produced by NeuroAIon's deterministic MockProvider "
-            "(no Anthropic API key configured). It demonstrates the end-to-end "
-            "pipeline. Set ANTHROPIC_API_KEY for a real, model-authored review.\n"
+            "## Mock narrative (NOT a real review)\n\n"
+            "Deterministic placeholder from MockProvider — for tests/CI only. Set "
+            "ANTHROPIC_API_KEY (or a DeepSeek/OpenAI key) for an API-driven run, or "
+            "drive the pipeline from an agent on your subscription (cowork mode).\n"
         )
 
 
@@ -262,12 +269,101 @@ def _extract_record_title(context: str) -> str:
     return ""
 
 
-def build_provider(name: str, model: str | None = None) -> LLMProvider:
-    """Construct a provider by name: anthropic | deepseek | openai | custom | mock."""
-    import os
+# ── Cowork provider (agent-driven; the controlling model IS the provider) ─────
+#
+# When a user tells an agent ("Claude Code, run this pipeline with my monthly
+# subscription"), there is no API key — the orchestrating model answers every
+# LLM call itself. The agent binds a handler once with ``set_cowork_handler``;
+# the pipeline then runs unchanged. Without a handler, requests are queued to
+# disk (content-addressed) so they can be answered in a batch and the run
+# resumed (answered calls are cached and returned on the next pass).
 
+_COWORK_HANDLER: Optional[Callable[..., Any]] = None
+
+
+def set_cowork_handler(fn: Optional[Callable[..., Any]]) -> None:
+    """Bind the callable that fulfils LLM calls in cowork mode.
+
+    ``fn(kind, system, user, schema, cache_prefix, max_tokens)`` must return a
+    ``dict`` when ``kind == 'json'`` (matching ``schema``) or a ``str`` when
+    ``kind == 'text'``.
+    """
+    global _COWORK_HANDLER
+    _COWORK_HANDLER = fn
+
+
+def cowork_ready() -> bool:
+    """True if cowork can serve calls: a handler is bound or a response dir exists."""
+    return _COWORK_HANDLER is not None or bool(config.COWORK_DIR)
+
+
+class CoworkPending(RuntimeError):
+    """Raised when a cowork request has no answer yet (batch/disk mode)."""
+
+
+class CoworkProvider(LLMProvider):
+    def __init__(self, handler: Optional[Callable[..., Any]] = None,
+                 response_dir: str | None = None, model: str = "cowork"):
+        self.handler = handler if handler is not None else _COWORK_HANDLER
+        self.dir = response_dir or config.COWORK_DIR or ".neuroaion_cowork"
+        self.model = model
+
+    @staticmethod
+    def _key(kind: str, system: str, user: str) -> str:
+        return hashlib.sha1(f"{kind}\x00{system}\x00{user}".encode("utf-8")).hexdigest()[:20]
+
+    def _serve(self, kind, *, system, user, schema, cache_prefix, max_tokens):
+        if self.handler is not None:
+            return self.handler(kind=kind, system=system, user=user, schema=schema,
+                                cache_prefix=cache_prefix, max_tokens=max_tokens)
+        # Disk batch fallback: return a cached answer or queue the request.
+        key = self._key(kind, system, user)
+        rdir = os.path.join(self.dir, "responses")
+        qdir = os.path.join(self.dir, "requests")
+        os.makedirs(rdir, exist_ok=True)
+        os.makedirs(qdir, exist_ok=True)
+        ext = "json" if kind == "json" else "txt"
+        rpath = os.path.join(rdir, f"{key}.{ext}")
+        if os.path.exists(rpath):
+            raw = open(rpath, encoding="utf-8").read()
+            return _parse_json_lenient(raw) if kind == "json" else raw
+        with open(os.path.join(qdir, f"{key}.json"), "w", encoding="utf-8") as fh:
+            json.dump({"kind": kind, "system": system, "user": user,
+                       "schema": schema, "max_tokens": max_tokens}, fh, indent=2)
+        raise CoworkPending(
+            f"Cowork request {key} needs an answer. Write {rpath} then re-run to "
+            f"resume (answered calls are cached). Bind set_cowork_handler(...) to "
+            f"answer live.")
+
+    def complete_json(self, *, system, user, schema, cache_prefix=None, max_tokens=8000):
+        out = self._serve("json", system=system, user=user, schema=schema,
+                          cache_prefix=cache_prefix, max_tokens=max_tokens)
+        return out if isinstance(out, dict) else _parse_json_lenient(str(out))
+
+    def complete_text(self, *, system, user, cache_prefix=None, max_tokens=16000):
+        out = self._serve("text", system=system, user=user, schema=None,
+                          cache_prefix=cache_prefix, max_tokens=max_tokens)
+        return out if isinstance(out, str) else json.dumps(out)
+
+
+# ── Provider selection ────────────────────────────────────────────────────────
+def provider_ready() -> bool:
+    """True if a real (non-mock) provider can run: an API key OR cowork is bound.
+
+    This is the fail-closed predicate — the engine must not silently fabricate a
+    review with MockProvider unless mock is explicitly requested.
+    """
+    if config.PROVIDER == "cowork":
+        return cowork_ready()
+    return config.have_api_key() or cowork_ready()
+
+
+def build_provider(name: str, model: str | None = None) -> LLMProvider:
+    """Construct a provider by name: anthropic | cowork | deepseek | openai | custom | mock."""
     if name == "mock":
         return MockProvider()
+    if name == "cowork":
+        return CoworkProvider(model=model or "cowork")
     if name == "anthropic":
         return AnthropicProvider(model=model)
     base, keyenv, default_model = config.OPENAI_COMPATIBLE.get(
@@ -280,7 +376,13 @@ def build_provider(name: str, model: str | None = None) -> LLMProvider:
 
 
 def get_provider(mock: bool, model: str | None = None) -> LLMProvider:
-    """Default provider for the run, honouring NEUROAION_PROVIDER."""
+    """Default provider for the run, honouring NEUROAION_PROVIDER and cowork.
+
+    Priority: explicit mock → cowork (if selected or a handler is bound) →
+    the configured API provider.
+    """
     if mock:
         return MockProvider()
+    if config.PROVIDER == "cowork" or (_COWORK_HANDLER is not None and not config.have_api_key()):
+        return CoworkProvider(model=model or "cowork")
     return build_provider(config.PROVIDER, model or config.DEFAULT_MODEL)

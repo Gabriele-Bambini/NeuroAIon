@@ -32,7 +32,11 @@ class Orchestrator:
                  stop_after: Optional[str] = None, from_state: Optional[ReviewState] = None,
                  logger: Optional[Callable[[str], None]] = None):
         self.seed = seed
-        self.mock = mock or not config.have_api_key()
+        # Mock only if explicitly requested, or if NO real provider is available
+        # (neither an API key nor a bound cowork handler / queue). Cowork mode —
+        # the pipeline driven by an agent on a subscription — is a real provider.
+        from .llm import provider_ready
+        self.mock = mock or not provider_ready()
         # By default, offline mock runs use synthetic sources; live runs hit real APIs.
         self.live_sources = (not self.mock) if live_sources is None else live_sources
         self.model = model or config.DEFAULT_MODEL

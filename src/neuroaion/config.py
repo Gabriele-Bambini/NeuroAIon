@@ -29,6 +29,12 @@ OPENAI_COMPATIBLE = {
     "custom": (os.environ.get("NEUROAION_BASE_URL", ""), "NEUROAION_API_KEY", ""),
 }
 
+# Cowork mode: the pipeline is driven by a controlling agent (e.g. Claude Code on
+# a monthly subscription) that answers every LLM call itself — no API key. Set
+# NEUROAION_PROVIDER=cowork, and either bind llm.set_cowork_handler(...) or point
+# NEUROAION_COWORK_DIR at a request/response queue directory.
+COWORK_DIR = os.environ.get("NEUROAION_COWORK_DIR", "").strip()
+
 NCBI_API_KEY = os.environ.get("NCBI_API_KEY", "").strip()
 CONTACT_EMAIL = os.environ.get("NEUROAION_CONTACT_EMAIL", "").strip() or "neuroaion@example.org"
 MAX_WORKERS = int(os.environ.get("NEUROAION_MAX_WORKERS", "8"))
