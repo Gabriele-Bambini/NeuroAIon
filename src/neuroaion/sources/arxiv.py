@@ -23,8 +23,14 @@ def search(query: str, retmax: int = 200, **_) -> list[Record]:
         year = int(published[:4]) if published[:4].isdigit() else None
         authors = [clean(a.findtext(f"{_ATOM}name")) for a in entry.findall(f"{_ATOM}author")]
         doi = clean(entry.findtext("{http://arxiv.org/schemas/atom}doi") or "")
+        arxiv_id = link.rsplit("/", 1)[-1]
+        ids: dict[str, str] = {}
+        if arxiv_id:
+            ids["arxiv"] = arxiv_id
+        if doi:
+            ids["doi"] = doi
         out.append(Record(
-            source="arxiv", source_id=link.rsplit("/", 1)[-1], doi=doi,
+            source="arxiv", source_id=arxiv_id, doi=doi, ids=ids,
             title=title, abstract=summary, authors=[a for a in authors if a],
             year=year, journal="arXiv", url=link,
         ))

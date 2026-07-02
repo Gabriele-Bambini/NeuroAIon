@@ -78,12 +78,21 @@ def _fetch_details(pmids: list[str]) -> list[Record]:
             init = a.findtext("Initials")
             if last:
                 authors.append(f"{last} {init}".strip())
-        doi = ""
+        doi, pmcid = "", ""
         for idn in art.findall(".//ArticleId"):
-            if idn.get("IdType") == "doi":
+            it = idn.get("IdType")
+            if it == "doi":
                 doi = clean(idn.text)
+            elif it == "pmc":
+                pmcid = clean(idn.text)
+        ids = {"pmid": pmid}
+        if doi:
+            ids["doi"] = doi
+        if pmcid:
+            ids["pmcid"] = pmcid
         out.append(Record(
-            source="pubmed", source_id=pmid, doi=doi, title=title, abstract=abstract,
+            source="pubmed", source_id=pmid, pmid=pmid, doi=doi, ids=ids,
+            title=title, abstract=abstract,
             authors=authors, year=year, journal=journal,
             url=f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
         ))

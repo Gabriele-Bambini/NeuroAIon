@@ -29,10 +29,25 @@ def _parse(w: dict) -> Record:
                for a in w.get("authorships", [])]
     authors = [a for a in authors if a]
     doi = clean((w.get("doi") or "").replace("https://doi.org/", ""))
+    oa_id = clean(w.get("id", "")).replace("https://openalex.org/", "")
+    ext = w.get("ids", {}) or {}
+    pmid = clean((ext.get("pmid") or "").rsplit("/", 1)[-1])
+    pmcid = clean((ext.get("pmcid") or "").rsplit("/", 1)[-1])
+    ids: dict[str, str] = {}
+    if doi:
+        ids["doi"] = doi
+    if pmid:
+        ids["pmid"] = pmid
+    if pmcid:
+        ids["pmcid"] = pmcid
+    if oa_id:
+        ids["openalex"] = oa_id
     return Record(
         source="openalex",
         source_id=clean(w.get("id", "")),
         doi=doi,
+        pmid=pmid,
+        ids=ids,
         title=clean(w.get("title", "")),
         abstract=_deinvert(w.get("abstract_inverted_index")),
         authors=authors,

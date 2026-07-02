@@ -20,10 +20,12 @@ def _parse(item: dict) -> Record | None:
     parts = item.get("issued", {}).get("date-parts", [[None]])
     if parts and parts[0] and parts[0][0]:
         year = parts[0][0]
+    doi = clean(item.get("DOI", ""))
     return Record(
         source="crossref",
-        source_id=clean(item.get("DOI", "")),
-        doi=clean(item.get("DOI", "")),
+        source_id=doi,
+        doi=doi,
+        ids={"doi": doi} if doi else {},
         title=title,
         abstract=clean(item.get("abstract", "")),
         authors=authors,

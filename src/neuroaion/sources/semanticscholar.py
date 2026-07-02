@@ -18,10 +18,28 @@ def _parse(p: dict) -> Record:
     ext = p.get("externalIds", {}) or {}
     oa = (p.get("openAccessPdf") or {}).get("url", "")
     authors = [clean(a.get("name", "")) for a in p.get("authors", [])]
+    paper_id = clean(p.get("paperId", ""))
+    doi = clean(ext.get("DOI", ""))
+    pmid = clean(str(ext.get("PubMed", "")))
+    pmcid = clean(str(ext.get("PubMedCentral", "")))
+    arxiv = clean(str(ext.get("ArXiv", "")))
+    ids: dict[str, str] = {}
+    if doi:
+        ids["doi"] = doi
+    if pmid:
+        ids["pmid"] = pmid
+    if pmcid:
+        ids["pmcid"] = pmcid
+    if arxiv:
+        ids["arxiv"] = arxiv
+    if paper_id:
+        ids["s2"] = paper_id
     return Record(
         source="semanticscholar",
-        source_id=clean(p.get("paperId", "")),
-        doi=clean(ext.get("DOI", "")),
+        source_id=paper_id,
+        doi=doi,
+        pmid=pmid,
+        ids=ids,
         title=clean(p.get("title", "")),
         abstract=clean(p.get("abstract", "")),
         authors=[a for a in authors if a],

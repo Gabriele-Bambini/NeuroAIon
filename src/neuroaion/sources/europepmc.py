@@ -19,10 +19,22 @@ def _parse(r: dict) -> Record:
         year = int(r.get("pubYear")) if r.get("pubYear") else None
     except (ValueError, TypeError):
         year = None
+    doi = clean(r.get("doi", ""))
+    pmid = clean(str(r.get("pmid", "")))
+    pmcid = clean(str(r.get("pmcid", "")))
+    ids: dict[str, str] = {}
+    if doi:
+        ids["doi"] = doi
+    if pmid:
+        ids["pmid"] = pmid
+    if pmcid:
+        ids["pmcid"] = pmcid
     return Record(
         source="europepmc",
         source_id=str(r.get("id", "")),
-        doi=clean(r.get("doi", "")),
+        doi=doi,
+        pmid=pmid,
+        ids=ids,
         title=clean(r.get("title", "")),
         abstract=clean(r.get("abstractText", "")),
         authors=authors,
