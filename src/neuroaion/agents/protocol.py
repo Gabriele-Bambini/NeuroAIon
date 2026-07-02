@@ -57,7 +57,69 @@ class ProtocolArchitect(Agent):
         except Exception:  # noqa: BLE001
             return []
 
+    def derive_pico(self, question: str) -> dict:
+        """Extract PICO/framework elements from a free-text research question.
+
+        This is what turns "does AI help find polyps at colonoscopy?" into a
+        structured, searchable protocol — the first step of a question-first
+        review. Returns a dict with title, question, framework, PICO slots,
+        eligible designs and seed inclusion/exclusion criteria.
+        """
+        schema = obj({
+            "title": {"type": "string"},
+            "question": {"type": "string"},
+            "framework": {"type": "string"},
+            "review_type": {"type": "string"},
+            "population": {"type": "string"},
+            "intervention": {"type": "string"},
+            "comparator": {"type": "string"},
+            "outcome": {"type": "string"},
+            "study_designs": {"type": "array", "items": {"type": "string"}},
+            "inclusion_criteria": {"type": "array", "items": {"type": "string"}},
+            "exclusion_criteria": {"type": "array", "items": {"type": "string"}},
+            "effect_measure": {"type": "string"},
+        })
+        system = (
+            "You are a senior systematic-review methodologist. Turn the user's "
+            "informal research question into a rigorous, answerable protocol. Choose "
+            "the most appropriate framework (PICO for interventions, PECO for "
+            "exposures, a DTA framing for diagnostic accuracy, PCC for scoping, "
+            "etc.), fill each element precisely, name the eligible study designs, "
+            "propose defensible inclusion/exclusion criteria, and pick the effect "
+            "measure a biostatistician would use (RR/OR/HR/MD/SMD/PROP/DTA). Be "
+            "specific and evidence-bound; do not invent a narrower question than asked."
+        )
+        try:
+            return self.ask_json(system, f"RESEARCH QUESTION: {question}", schema, max_tokens=2500)
+        except Exception:  # noqa: BLE001
+            return {}
+
     def build(self, seed: dict) -> ReviewProtocol:
+        # Question-first entry: if the reviewer supplied only a free-text question
+        # (no structured PICO), derive the PICO from it before anything else.
+        q_text = seed.get("question") or seed.get("title") or ""
+        if q_text and q_text not in (None, "auto") and not seed.get("pico"):
+            derived = self.derive_pico(q_text)
+            if derived:
+                seed = dict(seed)
+                seed["pico"] = {
+                    "framework": derived.get("framework", "PICO"),
+                    "population": derived.get("population", ""),
+                    "intervention": derived.get("intervention", ""),
+                    "comparator": derived.get("comparator", ""),
+                    "outcome": derived.get("outcome", ""),
+                    "study_designs": derived.get("study_designs", []),
+                }
+                seed.setdefault("title", derived.get("title", "") or seed.get("title", ""))
+                if seed.get("question") in (None, "", "auto"):
+                    seed["question"] = derived.get("question", "")
+                seed.setdefault("inclusion_criteria", derived.get("inclusion_criteria", []))
+                seed.setdefault("exclusion_criteria", derived.get("exclusion_criteria", []))
+                if derived.get("effect_measure"):
+                    syn = dict(seed.get("synthesis") or {})
+                    syn.setdefault("effect_measure", derived["effect_measure"])
+                    seed["synthesis"] = syn
+
         pico = PICO(**(seed.get("pico") or {}))
         search = SearchConfig(**{k: v for k, v in (seed.get("search") or {}).items()})
         if search.date_to in (None, "auto"):

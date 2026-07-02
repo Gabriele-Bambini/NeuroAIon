@@ -51,6 +51,25 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--no-bundle", action="store_true",
                      help="Do not create the portable zip bundle of artefacts.")
 
+    ask = sub.add_parser(
+        "ask", help="Question → complete review. Give a plain-English question; the "
+                    "tool derives the PICO, searches, screens, extracts, appraises, "
+                    "meta-analyses and writes the manuscript.")
+    ask.add_argument("question", help='e.g. "Does AI-assisted colonoscopy improve adenoma detection?"')
+    ask.add_argument("--out", "-o", default="runs", help="Output root directory.")
+    ask.add_argument("--model", default=None, help=f"Model (default {config.DEFAULT_MODEL}).")
+    ask.add_argument("--workers", type=int, default=None, help="Concurrent screening workers.")
+    ask.add_argument("--provider",
+                     help="LLM backend: anthropic | cowork | deepseek | openai | custom | mock. "
+                          "'cowork' = driven by the controlling agent on your subscription.")
+    ask.add_argument("--allow-mock", action="store_true",
+                     help="Permit synthetic placeholder output when no provider is available.")
+    ask.add_argument("--mock", action="store_true", help="Force offline mock run (demo).")
+    ask.add_argument("--no-latex", action="store_true", help="Skip LaTeX paper generation.")
+    ask.add_argument("--no-pdf", action="store_true", help="Skip local PDF compilation.")
+    ask.add_argument("--no-bundle", action="store_true", help="Skip the portable zip bundle.")
+    ask.add_argument("--save-zip", metavar="PATH", help="Also save the bundle to a local path.")
+
     sub.add_parser("agents", help="List the eight agents and their PRISMA responsibilities.")
 
     new = sub.add_parser("new", help="Interactive setup wizard: choose topic, framework "
@@ -73,6 +92,34 @@ def main(argv: list[str] | None = None) -> int:
             print(f"\nDone → {orch.last_out_dir}")
         else:
             print(f"Next:  neuroaion run -p {proto_path} --out {out_path}")
+        return 0
+
+    if args.command == "ask":
+        if args.provider:
+            config.PROVIDER = args.provider.strip().lower()
+        seed = {"question": args.question, "search": {"snowball": True}}
+        live = None  # live sources when a real provider drives the run
+        orch = Orchestrator(
+            seed, mock=args.mock, live_sources=live, model=args.model,
+            max_workers=args.workers, make_latex=not args.no_latex,
+            compile_pdf=not args.no_pdf, make_bundle=not args.no_bundle,
+            save_zip=args.save_zip,
+        )
+        # Fail closed: never pass off placeholder text as a real review.
+        if orch.mock and not (args.mock or args.allow_mock):
+            ask.error(
+                "no LLM provider available — refusing to fabricate a review.\n"
+                "  • API mode:    set ANTHROPIC_API_KEY (or a DeepSeek/OpenAI key), or\n"
+                "  • Cowork mode: run under an agent on your subscription with "
+                "--provider cowork, or\n"
+                "  • Demo:        pass --allow-mock to accept synthetic placeholder output.")
+        if orch.mock:
+            print("ℹ  Running in MOCK mode — synthetic placeholder output, not a real review.",
+                  file=sys.stderr)
+        print(f"⟳ Formulating the protocol from your question and running the review …",
+              file=sys.stderr)
+        orch.run(out_root=args.out)
+        print(f"\nDone → {orch.last_out_dir}/  (open report.md / paper.pdf / documents/)")
         return 0
 
     if args.command == "agents":
