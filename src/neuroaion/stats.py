@@ -110,7 +110,9 @@ def tau2_REML(ys, vs, tol=1e-7, max_iter=200) -> float:
         w = 1.0 / (vs + tau2)
         sw = np.sum(w)
         mu = np.sum(w * ys) / sw
-        new = max(0.0, float((np.sum(w ** 2 * ((ys - mu) ** 2 - vs)) + 1.0 / sw) / np.sum(w ** 2)))
+        # REML estimating equation (Viechtbauer 2005): the estimated-mean
+        # correction 1/Σw is an additive term, NOT divided by Σw².
+        new = max(0.0, float(np.sum(w ** 2 * ((ys - mu) ** 2 - vs)) / np.sum(w ** 2) + 1.0 / sw))
         if abs(new - tau2) < tol:
             return new
         tau2 = new
@@ -132,6 +134,10 @@ def _pool(ys, vs, *, model="random", tau2_method="DL", knha=False) -> dict:
     if knha and k >= 2 and df > 0:
         q_hk = float(np.sum(w * (ys - mu) ** 2) / df)
         se = math.sqrt(q_hk / np.sum(w))
+        # Röver-Knapp-Friede ad-hoc floor: never report a Hartung-Knapp SE narrower
+        # than the classical (Wald) random-effects SE — avoids anticonservative
+        # intervals when tau^2 ~ 0 and k is small.
+        se = max(se, math.sqrt(1.0 / np.sum(w)))
         crit = float(scipy_stats.t.ppf(0.975, df))
         stat = mu / se if se else 0.0
         p = float(2 * scipy_stats.t.sf(abs(stat), df))
@@ -262,7 +268,7 @@ def trim_and_fill(ys, vs, *, model="random", tau2_method="DL", max_iter=100):
 
 # ── main entry point ─────────────────────────────────────────────────────────
 def meta_analyze(effects, *, measure="SMD", model="random", labels=None,
-                 tau2_method="DL", knha=False, prediction_interval_=True,
+                 tau2_method="REML", knha=False, prediction_interval_=True,
                  subgroup=False, leave_one_out_=False, publication_bias=False,
                  outcome="") -> Optional[MetaAnalysisResult]:
     labels = labels or [f"study {i+1}" for i in range(len(effects))]
