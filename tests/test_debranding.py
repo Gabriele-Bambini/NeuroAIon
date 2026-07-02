@@ -53,3 +53,31 @@ def test_no_brand_or_ai_leak_in_output(tmp_path):
 
     assert scanned > 5, f"expected to scan several artefacts, only saw {scanned}"
     assert not leaks, "De-branding leak(s) in shipped output:\n" + "\n".join(leaks[:20])
+
+
+def test_bundle_zip_is_clean(tmp_path):
+    """The shareable bundle must contain NO internal/leaky file — not even the
+    resume-only state.json (which carries the model id and the run log)."""
+    import zipfile
+
+    orch = Orchestrator({"title": "AI-assisted colonoscopy and adenoma detection"},
+                        mock=True, make_latex=True, compile_pdf=False, make_bundle=True)
+    orch.run(out_root=str(tmp_path))
+    zips = list(Path(orch.last_out_dir).glob("*_bundle.zip"))
+    assert zips, "no bundle produced"
+    leaks: list[str] = []
+    with zipfile.ZipFile(zips[0]) as zf:
+        names = zf.namelist()
+        # Internal resume/state files must be excluded from the deliverable.
+        assert "state.json" not in names and "screening_handoff.json" not in names
+        for n in names:
+            if not n.lower().endswith((".md", ".txt", ".json", ".csv", ".bib",
+                                       ".tex", ".html", ".jsonl", ".yaml", ".yml")):
+                continue
+            text = zf.read(n).decode("utf-8", "ignore").lower()
+            for term in _FORBIDDEN:
+                if term in text:
+                    idx = text.find(term)
+                    ctx = re.sub(r"\s+", " ", text[max(0, idx - 40):idx + 40])
+                    leaks.append(f"{n} :: '{term}' :: …{ctx}…")
+    assert not leaks, "De-branding leak(s) in bundle:\n" + "\n".join(leaks[:20])

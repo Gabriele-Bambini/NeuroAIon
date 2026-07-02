@@ -426,15 +426,23 @@ def slugify(text: str, maxlen: int = 48) -> str:
     return (s[:maxlen].rstrip("-")) or "review"
 
 
+# Resume-only / operational files that stay in the run directory but are NOT
+# placed in the shareable bundle: they carry internal machinery (the raw run
+# state, including the model identifier and the operational log) that has no
+# place in a deliverable a reviewer might forward to a third party.
+_BUNDLE_EXCLUDE = {"state.json", "screening_handoff.json"}
+
+
 def bundle_run(out_dir: Path) -> Path:
-    """Zip every artefact in the run directory into a single portable bundle —
-    the pipeline's 'save locally' deliverable. Returns the zip path."""
+    """Zip the shareable artefacts in the run directory into a portable bundle —
+    the 'save locally' deliverable. Internal resume/state files are excluded.
+    Returns the zip path."""
     import zipfile
     out_dir = Path(out_dir)
     zip_path = out_dir / f"{out_dir.name}_bundle.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(out_dir.rglob("*")):       # recursive: includes documents/
-            if f.is_file() and f.name != zip_path.name:
+            if f.is_file() and f.name != zip_path.name and f.name not in _BUNDLE_EXCLUDE:
                 z.write(f, str(f.relative_to(out_dir)))
     return zip_path
 

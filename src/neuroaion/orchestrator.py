@@ -112,7 +112,7 @@ class Orchestrator:
         run_id = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
         # Agent 1 — protocol
-        self._log_fn(f"[1/8] ProtocolArchitect · building protocol …")
+        self._log_fn(f"Formulating the review protocol and eligibility criteria …")
         protocol = ProtocolArchitect(self.provider_for("protocol"), self.seed_protocol_stub()).build(self.seed)
         state = ReviewState(run_id=run_id, mock=self.mock,
                             model=("mock" if self.mock else self.model), protocol=protocol)
@@ -129,7 +129,7 @@ class Orchestrator:
             self._scope(state, protocol)
 
         # Agent 2 — search strategy + identification
-        self.log("[2/8] SearchStrategist · search, identify & de-duplicate …", state)
+        self.log("Searching the literature, identifying and de-duplicating records …", state)
         strategist = SearchStrategist(self.provider_for("search_strategy"), protocol)
         state.strategy = strategist.design()
         state.records = self._identify(state)
@@ -148,7 +148,7 @@ class Orchestrator:
         self.log(f"{removed} duplicates removed → {len(state.unique_records)} unique records.", state)
 
         # Agents 4 & 5 — dual screening + adjudication
-        self.log("[3/8] TitleAbstractScreener · dual independent screening + κ …", state)
+        self.log("Screening titles and abstracts (dual, independent) with inter-rater agreement …", state)
         self._screen(state)
         self.log(f"Cohen's κ = {state.cohen_kappa}. "
                  f"{len(state.included_after_screening)} records retained for full text.", state)
@@ -186,13 +186,13 @@ class Orchestrator:
 
         # Agent 6 — full-text retrieval + eligibility
         if self.retriever is not None:
-            self.log("[4/8] EligibilityAdjudicator · retrieving reports (PMC / Europe PMC) …", state)
+            self.log("Retrieving full-text reports (PMC / Europe PMC) …", state)
             self._retrieve_fulltexts(state)
             got = sum(1 for ft in self._fulltext.values() if ft.retrieved)
             self.log(f"Full text retrieved for {got}/{len(self._fulltext)} reports "
                      f"(remainder assessed from abstract).", state)
         else:
-            self.log("[4/8] EligibilityAdjudicator · adjudicating & assessing reports …", state)
+            self.log("Adjudicating conflicts and assessing full-text eligibility …", state)
         self._eligibility(state)
         self.log(f"{len(state.included_studies)} studies eligible for inclusion.", state)
 
@@ -214,7 +214,7 @@ class Orchestrator:
                     e.exclusion_reason = "No resolvable identifier (unverifiable citation)"
 
         # Agents 7 & 8 — extraction + risk of bias (on the verified included set)
-        self.log("[5-6/8] DataExtractor & RiskOfBiasAssessor · on included studies …", state)
+        self.log("Extracting data and appraising risk of bias on included studies …", state)
         self._extract_and_appraise(state)
         self._checkpoint(out_dir, state)
 
@@ -225,7 +225,7 @@ class Orchestrator:
         assign_citation_numbers(state)
 
         # Agent 9 — synthesis
-        self.log("[7/8] EvidenceSynthesizer · synthesis, meta-analysis & publication bias …", state)
+        self.log("Synthesising the evidence: meta-analysis and publication-bias assessment …", state)
         state.synthesis = EvidenceSynthesizer(self.provider_for("synthesis"), protocol).synthesize(
             state.extractions, state.rob)
         if state.synthesis.meta_analysis:
@@ -254,7 +254,7 @@ class Orchestrator:
         except Exception as e:  # noqa: BLE001
             self.log(f"Screening workbook skipped ({e}).", state)
 
-        self.log("[8/8] PRISMAReporter · manuscript, figures, PDF/LaTeX/PROSPERO …", state)
+        self.log("Compiling the manuscript, figures, checklist and registration …", state)
         prose = PRISMAReporter(self.provider_for("reporter"), protocol).write_prose(state)
         report_path = write_artifacts(out_dir, state, prose)
 
@@ -315,7 +315,7 @@ class Orchestrator:
         agent.apply(protocol, result)
         state.scoping = result
         n_groups = len(result.keyword_groups)
-        self.log(f"[0/8] ScopingAgent · probed {len(sample)} records → "
+        self.log(f"Scoping the literature: probed {len(sample)} records → "
                  f"{n_groups} synonym cluster(s); criteria and vocabulary refined.", state)
 
     def _identify(self, state: ReviewState) -> list[Record]:
