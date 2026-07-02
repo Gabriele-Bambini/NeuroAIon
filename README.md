@@ -66,19 +66,42 @@ bundle out with `--save-zip ~/Desktop/review.zip`.
 
 ## Quickstart
 
+Ask a question, get a complete review. The one command that matters:
+
 ```bash
-pip install -r requirements.txt          # or: pip install -e .
+pip install -e ".[all]"          # includes figures + PDF + workbook support
 
-# 1) Offline demo — runs the whole pipeline with a synthetic corpus, NO API key:
-python scripts/run_review.py --protocol config/protocol.example.yaml --mock
-
-# 2) Real review — set your key, then run for real against live databases:
+# Question → publishable review. The tool derives the PICO from your question,
+# scopes the literature, searches, screens, extracts, appraises, meta-analyses
+# and writes the manuscript — end to end.
 export ANTHROPIC_API_KEY=sk-ant-...
-python scripts/run_review.py --protocol config/protocol.example.yaml
-
-# Inspect the roster:
-PYTHONPATH=src python -m neuroaion.cli agents
+neuroaion ask "Does AI-assisted colonoscopy improve adenoma detection versus standard colonoscopy?"
 ```
+
+No key yet? Try the full pipeline offline on a synthetic corpus (clearly labelled
+mock output — it never masquerades as a real review):
+
+```bash
+neuroaion ask "Does drug X reduce mortality versus placebo?" --allow-mock
+```
+
+Other entry points:
+
+```bash
+# Interactive setup wizard (choose framework, RoB tool, citation style, …):
+neuroaion new
+
+# Run from a hand-written protocol file:
+neuroaion run --protocol config/protocol.example.yaml     # add --allow-mock for a demo
+
+# Inspect the agent roster:
+neuroaion agents
+```
+
+> Install `pip install -e .` (no extras) for the core engine only; figures,
+> native PDF and the screening workbook need `[all]` (or the individual
+> `[figures]`, `[pdf]`, `[xlsx]` extras). Without them the run still completes
+> and degrades gracefully (figures skipped, workbook falls back to CSV).
 
 Outputs land in `runs/<timestamp>/`:
 
