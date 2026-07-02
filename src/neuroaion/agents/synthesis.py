@@ -297,9 +297,11 @@ class EvidenceSynthesizer(Agent):
         # meta-analysis + GRADE table would be category-inappropriate.
         quantitative = review_type not in ("scoping", "qualitative")
         # GRADE (certainty of evidence) applies to gradable quantitative reviews
-        # only, and can be switched off in the protocol.
+        # only, and can be switched off in the protocol. Prevalence and diagnostic
+        # reviews use different certainty frameworks (not the standard
+        # intervention GRADE), so the standard table is suppressed for them.
         do_grade = quantitative and self.protocol.risk_of_bias.grade \
-            and review_type not in ("prevalence",)
+            and review_type not in ("prevalence", "diagnostic")
 
         groups = self._group_by_outcome(extractions)
 
