@@ -305,6 +305,52 @@ APPLICABILITY: dict[str, dict[str, list[str]]] = {
 }
 
 
+def select_tool_for_design(design: str, review_type: str = "") -> str:
+    """Choose the risk-of-bias instrument that matches a study's design.
+
+    The instrument must fit the design or the appraisal is invalid: RoB 2 is for
+    randomized trials only, ROBINS-I for non-randomized studies of interventions,
+    QUADAS-2 for diagnostic-accuracy studies, ROBINS-E for exposure studies, and
+    the Newcastle-Ottawa Scale for observational cohorts/case-control studies
+    without an intervention. The study's stated design wins; the review type is a
+    fallback when the design is silent.
+    """
+    d = (design or "").lower()
+    rt = (review_type or "").lower()
+
+    # Diagnostic-test-accuracy studies.
+    if any(k in d for k in ("diagnostic", "accuracy", "sensitivity", "specificity",
+                            "index test")) or "diagnostic" in rt:
+        return "QUADAS-2"
+    # Non-randomized studies of an intervention — checked BEFORE the RCT branch
+    # because "non-randomized" contains the substring "randomi".
+    if any(k in d for k in ("non-random", "nonrandom", "non random",
+                            "quasi-experimental", "quasi experimental",
+                            "before-after", "before and after", "interrupted time")):
+        return "ROBINS-I"
+    # Randomized trials.
+    if any(k in d for k in ("randomi", "rct", "randomized controlled",
+                            "randomised controlled")):
+        return "RoB2"
+    # Exposure / aetiology / prognostic-factor studies.
+    if any(k in d for k in ("exposure", "aetiolog", "etiolog")) or \
+            rt in ("exposure", "prognostic"):
+        return "ROBINS-E"
+    # Plain observational designs.
+    if any(k in d for k in ("cohort", "case-control", "case control",
+                            "cross-sectional", "observational", "registry")):
+        # An observational study *of an intervention* → ROBINS-I; otherwise NOS.
+        if rt in ("intervention", "") and any(
+                k in d for k in ("cohort", "case-control", "case control")):
+            return "ROBINS-I" if "intervention" in rt else "Newcastle-Ottawa"
+        return "Newcastle-Ottawa"
+    # Systematic-review / overview inputs.
+    if "systematic review" in d or "meta-analysis" in d or rt == "methodological":
+        return "AMSTAR-2"
+    # Default: randomized-trial instrument for an intervention review.
+    return "RoB2"
+
+
 def _frameworks_domains(tool: str) -> list[str]:
     """Best-effort lookup of a tool's domains from frameworks.ROB_TOOLS.
 

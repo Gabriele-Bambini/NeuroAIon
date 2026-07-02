@@ -204,3 +204,26 @@ def test_traffic_and_summary_figures_build():
     import matplotlib.pyplot as plt
     plt.close(fig1)
     plt.close(fig2)
+
+
+def test_select_tool_for_design_matches_instrument():
+    from neuroaion.rob_tools import select_tool_for_design as sel
+    assert sel("randomized controlled trial") == "RoB2"
+    assert sel("diagnostic accuracy study") == "QUADAS-2"
+    assert sel("prospective cohort study") == "Newcastle-Ottawa"
+    assert sel("non-randomized interventional study") == "ROBINS-I"
+    assert sel("", "exposure") == "ROBINS-E"
+    assert sel("quasi-experimental before-after") == "ROBINS-I"
+    assert sel("") == "RoB2"        # safe default
+
+
+def test_auto_tool_selection_uses_design(monkeypatch):
+    from neuroaion.agents.rob import RiskOfBiasAssessor
+    from neuroaion.llm import MockProvider
+    from neuroaion.models import ExtractionRecord, Record, ReviewProtocol, RoBConfig
+    prot = ReviewProtocol(title="t", risk_of_bias=RoBConfig(tool="auto"))
+    agent = RiskOfBiasAssessor(MockProvider(), prot)
+    rec = Record(source="s", doi="10/x", title="A diagnostic study")
+    ex = ExtractionRecord(uid=rec.uid, study_label="Dx 2020", design="diagnostic accuracy study")
+    a = agent.assess(rec, ex, full_text="Index test vs reference standard.")
+    assert a.tool == "QUADAS-2"

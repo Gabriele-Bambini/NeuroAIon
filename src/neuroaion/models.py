@@ -64,13 +64,19 @@ class SynthesisConfig(BaseModel):
 
 
 class RoBConfig(BaseModel):
-    tool: str = "RoB2"
+    # "auto" selects the instrument per study from its design (RCT→RoB2,
+    # NRSI→ROBINS-I, diagnostic→QUADAS-2, exposure→ROBINS-E, observational→
+    # Newcastle-Ottawa). An explicit tool name pins it for the whole review.
+    tool: str = "auto"
     grade: bool = True
 
 
 class ReviewProtocol(BaseModel):
     title: str = ""
     question: str = ""
+    # intervention | diagnostic | prognostic | exposure | prevalence | scoping |
+    # qualitative | methodological — drives instrument/synthesis selection.
+    review_type: str = "intervention"
     pico: PICO = Field(default_factory=PICO)
     inclusion_criteria: list[str] = Field(default_factory=list)
     exclusion_criteria: list[str] = Field(default_factory=list)

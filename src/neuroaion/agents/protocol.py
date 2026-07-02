@@ -5,6 +5,28 @@ from ..frameworks import FRAMEWORKS
 from ..models import (PICO, ReviewProtocol, RoBConfig, SearchConfig, SynthesisConfig)
 from .base import Agent, obj
 
+_REVIEW_TYPES = {"intervention", "diagnostic", "prognostic", "exposure",
+                 "prevalence", "scoping", "qualitative", "methodological"}
+
+
+def _norm_review_type(raw: str) -> str:
+    """Map a free-text review-type label onto a canonical value."""
+    r = (raw or "").strip().lower()
+    if r in _REVIEW_TYPES:
+        return r
+    for key, hints in {
+        "diagnostic": ("diagnos", "accuracy", "dta"),
+        "prognostic": ("prognos", "prediction model"),
+        "exposure": ("exposure", "aetiolog", "etiolog", "peco"),
+        "prevalence": ("prevalence", "proportion", "epidemiolog", "incidence"),
+        "scoping": ("scoping", "scr", "mapping"),
+        "qualitative": ("qualitative", "thematic", "meta-aggregation", "spider"),
+        "methodological": ("methodolog", "benchmark", "umbrella", "overview"),
+    }.items():
+        if any(h in r for h in hints):
+            return key
+    return "intervention"
+
 
 class ProtocolArchitect(Agent):
     name = "ProtocolArchitect"
@@ -115,6 +137,8 @@ class ProtocolArchitect(Agent):
                     seed["question"] = derived.get("question", "")
                 seed.setdefault("inclusion_criteria", derived.get("inclusion_criteria", []))
                 seed.setdefault("exclusion_criteria", derived.get("exclusion_criteria", []))
+                if derived.get("review_type"):
+                    seed.setdefault("review_type", _norm_review_type(derived["review_type"]))
                 if derived.get("effect_measure"):
                     syn = dict(seed.get("synthesis") or {})
                     syn.setdefault("effect_measure", derived["effect_measure"])
@@ -131,6 +155,7 @@ class ProtocolArchitect(Agent):
         protocol = ReviewProtocol(
             title=seed.get("title", "").strip(),
             question="" if seed.get("question") in (None, "auto") else seed.get("question", ""),
+            review_type=_norm_review_type(seed.get("review_type", "intervention")),
             pico=pico,
             inclusion_criteria=seed.get("inclusion_criteria", []),
             exclusion_criteria=seed.get("exclusion_criteria", []),

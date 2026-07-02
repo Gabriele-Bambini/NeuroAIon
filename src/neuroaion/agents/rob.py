@@ -24,7 +24,13 @@ class RiskOfBiasAssessor(Agent):
 
     def assess(self, record: Record, extraction: ExtractionRecord,
                full_text: str = "") -> RoBAssessment:
-        tool = self.protocol.risk_of_bias.tool or "RoB2"
+        configured = (self.protocol.risk_of_bias.tool or "auto").strip()
+        if configured.lower() == "auto":
+            # Match the instrument to THIS study's design (RoB2/ROBINS-I/QUADAS-2/…).
+            tool = rob_tools.select_tool_for_design(
+                extraction.design, getattr(self.protocol, "review_type", ""))
+        else:
+            tool = configured
         if tool not in rob_tools.SIGNALLING and tool not in ROB_TOOLS:
             tool = "RoB2"
         domains = rob_tools.domains_for(tool)
