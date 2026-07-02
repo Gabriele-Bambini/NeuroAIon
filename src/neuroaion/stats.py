@@ -96,19 +96,38 @@ def _logit(p: float) -> float:
     return math.log(p / (1.0 - p))
 
 
-def _usable(e: EffectEstimate) -> Optional[tuple[float, float]]:
-    """Return (effect, se) transformed onto the measure's *analysis* scale.
+def _finite(pair: Optional[tuple[float, float]]) -> Optional[tuple[float, float]]:
+    """Reject (effect, se) pairs that are non-finite — they poison the pool."""
+    if pair is None:
+        return None
+    y, se = pair
+    if not (math.isfinite(y) and math.isfinite(se)) or se <= 0:
+        return None
+    return pair
 
-    The reported estimate/CI/SE are converted to the pooling scale (log for
-    ratios, logit for proportions, Fisher-z for correlations) so the pool, its
-    CI and every sensitivity analysis operate on the variance-stabilised scale;
-    the forest and pooled point are back-transformed for display via
-    ``_backtransform``. Returns ``None`` when the record cannot be used (missing
-    estimate, non-positive SE, out-of-range proportion/correlation).
+
+def _usable(e: EffectEstimate) -> Optional[tuple[float, float]]:
+    """Return (effect, se) on the analysis scale, or None if unusable.
+
+    A thin finite/positive-SE guard around :func:`_usable_raw` so that no
+    non-finite pair (NaN/±inf from a bad extraction or a degenerate transform)
+    ever reaches the pool and silently corrupts every downstream statistic.
+    """
+    return _finite(_usable_raw(e))
+
+
+def _usable_raw(e: EffectEstimate) -> Optional[tuple[float, float]]:
+    """Transform the reported estimate/CI/SE onto the measure's analysis scale.
+
+    Ratios → log, proportions → logit (delta-method SE), correlations → Fisher-z,
+    everything else as reported. Returns None for a missing/non-finite estimate,
+    non-positive SE, or an out-of-range proportion/correlation.
     """
     if e.estimate is None:
         return None
     est, se = float(e.estimate), e.se
+    if not math.isfinite(est) or (se is not None and not math.isfinite(se)):
+        return None
     scale = _analysis_scale(e.measure)
 
     if scale == "log":
@@ -460,11 +479,21 @@ def trim_and_fill(ys, vs, *, model="random", tau2_method="DL", max_iter=100):
     return {"missing": int(L), "side": side, "adjusted_estimate": float(adj)}
 
 
+# Measures this univariate inverse-variance engine can pool correctly. Anything
+# else (e.g. diagnostic-accuracy "DTA", which needs a bivariate/HSROC model) is
+# refused rather than silently pooled on the wrong scale.
+SUPPORTED_MEASURES = {"SMD", "MD", "RD", "OR", "RR", "HR", "IRR", "ROM",
+                      "COR", "R", "PROP", "PROPORTION"}
+
+
 # ── main entry point ─────────────────────────────────────────────────────────
 def meta_analyze(effects, *, measure="SMD", model="random", labels=None,
                  tau2_method="REML", knha=False, prediction_interval_=True,
                  subgroup=False, leave_one_out_=False, publication_bias=False,
                  moderator=False, outcome="") -> Optional[MetaAnalysisResult]:
+    if (measure or "").upper() not in SUPPORTED_MEASURES:
+        # Unsupported measure — do not fabricate a univariate pool.
+        return None
     labels = labels or [f"study {i+1}" for i in range(len(effects))]
     rows, used, groups, mods = [], [], [], []
     for lab, e in zip(labels, effects):

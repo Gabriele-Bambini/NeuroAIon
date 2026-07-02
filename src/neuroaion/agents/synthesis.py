@@ -66,12 +66,31 @@ class EvidenceSynthesizer(Agent):
     # ── per-outcome meta-analysis ────────────────────────────────────────────
     def _meta_for_outcome(self, name: str, effects: list[EffectEstimate],
                           labels: list[str], cfg) -> Optional[MetaAnalysisResult]:
-        k = len(effects)
-        if k < cfg.min_studies_for_meta:
+        if len(effects) < cfg.min_studies_for_meta:
             return None
-        # Per-outcome measure if the effects carry their own, else the config default.
-        measures = {(e.measure or "").upper() for e in effects if e.measure}
-        measure = measures.pop() if len(measures) == 1 else cfg.effect_measure
+        # A single outcome must be pooled on ONE scale. If studies report the
+        # outcome with different measures (e.g. some OR, some SMD), pooling them
+        # together is meaningless — restrict to the dominant measure and pool only
+        # those studies, rather than silently blending incompatible scales.
+        tally: dict[str, int] = {}
+        for e in effects:
+            mm = (e.measure or "").upper()
+            if mm:
+                tally[mm] = tally.get(mm, 0) + 1
+        if tally:
+            top = max(tally.values())
+            candidates = sorted(m for m, c in tally.items() if c == top)
+            measure = (cfg.effect_measure.upper() if cfg.effect_measure.upper() in candidates
+                       else candidates[0])
+        else:
+            measure = cfg.effect_measure
+        coherent = [(e, lab) for e, lab in zip(effects, labels)
+                    if (e.measure or "").upper() == measure.upper()]
+        if len(coherent) < cfg.min_studies_for_meta:
+            return None
+        effects = [e for e, _ in coherent]
+        labels = [lab for _, lab in coherent]
+        k = len(effects)
         random = cfg.model == "random"
         tau2_method = "REML" if random else "DL"
         knha = random and k >= 3

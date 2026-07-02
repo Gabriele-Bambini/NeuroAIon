@@ -98,6 +98,28 @@ def test_recompute_continuous_from_median():
     assert "median" in r.provenance
 
 
+def test_double_zero_2x2_excluded():
+    assert from_2x2(0, 20, 0, 20, "OR") is None
+    assert from_2x2(0, 20, 0, 20, "RR") is None
+    # A single zero cell is still corrected, not excluded.
+    assert from_2x2(0, 20, 5, 20, "OR") is not None
+
+
+def test_median_conversion_rejects_bad_input():
+    assert mean_sd_from_median(1, 5, q1=4, q3=6) is None          # n<2
+    assert mean_sd_from_median(30, 5, q1=8, q3=2) is None          # q1>q3 (median outside)
+    assert mean_sd_from_median(30, 5, lo=6, hi=10) is None         # median<lo
+    assert mean_sd_from_median(30, 5, q1=4, q3=6) is not None      # valid
+
+
+def test_recompute_recovers_sd_from_p_value():
+    e = EffectEstimate(measure="MD", mean_intervention=10.0, mean_comparator=8.0,
+                       n_intervention=30, n_comparator=30, p_value=0.01)
+    r = recompute(e)
+    assert r.recomputed and r.se and "p-value" in r.provenance
+    assert math.isclose(r.estimate, 2.0, rel_tol=REL)
+
+
 def test_recompute_falls_back_to_ci_se():
     e = EffectEstimate(measure="RR", estimate=1.5, ci_lower=1.1, ci_upper=2.0)
     r = recompute(e)

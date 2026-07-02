@@ -135,3 +135,37 @@ def test_hedges_g_and_log_or_conversions():
     assert md == 2.0 and vmd > 0
     z, vz = fisher_z(0.5, 40)
     assert z > 0 and vz == 1.0 / 37
+
+
+def test_nonfinite_inputs_are_dropped_not_pooled():
+    import math
+    from neuroaion.models import EffectEstimate
+    from neuroaion.stats import meta_analyze
+    effs = [
+        EffectEstimate(measure="SMD", estimate=0.5, se=0.2),
+        EffectEstimate(measure="SMD", estimate=float("nan"), se=0.2),
+        EffectEstimate(measure="SMD", estimate=0.4, se=float("inf")),
+        EffectEstimate(measure="SMD", estimate=0.6, se=0.25),
+    ]
+    m = meta_analyze(effs, measure="SMD", model="fixed")
+    # Only the two finite studies are counted and pooled.
+    assert m.k_studies == 2 and math.isfinite(m.pooled_estimate)
+
+
+def test_unsupported_measure_refused():
+    from neuroaion.models import EffectEstimate
+    from neuroaion.stats import meta_analyze
+    effs = [EffectEstimate(measure="DTA", estimate=0.9, se=0.05),
+            EffectEstimate(measure="DTA", estimate=0.85, se=0.05)]
+    assert meta_analyze(effs, measure="DTA") is None
+
+
+def test_proportion_pooled_on_logit_scale():
+    import math
+    from neuroaion.models import EffectEstimate
+    from neuroaion.stats import meta_analyze
+    effs = [EffectEstimate(measure="PROP", estimate=0.30, se=0.02),
+            EffectEstimate(measure="PROP", estimate=0.25, se=0.02)]
+    m = meta_analyze(effs, measure="PROP", model="fixed")
+    assert 0.24 < m.pooled_estimate < 0.31          # sensible, between the inputs
+    assert 0.0 < m.ci_lower and m.ci_upper < 1.0    # CI stays in range

@@ -68,6 +68,12 @@ def from_2x2(a: float, n1: float, c: float, n2: float, measure: str) -> Optional
         return None
     m = (measure or "").upper()
 
+    # Double-zero studies carry no information about a ratio and are excluded
+    # (as RevMan and metafor's rma.mh(drop00=TRUE) do) rather than continuity-
+    # corrected into a spurious "no effect" data point.
+    if m in ("OR", "RR") and ((a == 0 and c == 0) or (b == 0 and d == 0)):
+        return None
+
     zero = min(a, b, c, d) == 0
     corr = ""
     if zero and m in ("OR", "RR"):
@@ -144,11 +150,18 @@ def mean_sd_from_median(n: float, median: float,
       * C2: q1, median, q3
       * C3: min, q1, median, q3, max
     """
-    if n is None or n <= 0 or median is None:
+    if n is None or n < 2 or median is None:            # n>=2: n=1 gives a zero/inf SD
         return None
     n = float(n)
     have_iqr = q1 is not None and q3 is not None
     have_range = lo is not None and hi is not None
+    # Reject inconsistent orderings rather than emit a negative/blended SD.
+    if have_iqr and not (q1 <= median <= q3):
+        return None
+    if have_range and not (lo <= median <= hi):
+        return None
+    if have_iqr and have_range and not (lo <= q1 and q3 <= hi):
+        return None
 
     if have_range and have_iqr:                        # scenario C3
         # Luo 2018 mean (eq. 15) + Wan 2014 SD (eq. 12).
@@ -262,6 +275,25 @@ def recompute(e: EffectEstimate) -> EffectEstimate:
                                   e.q3_comparator, e.min_comparator, e.max_comparator)
         if got:
             m2, sd2 = got[0], got[1]
+
+    # 2c) Means present but the SD reported only indirectly — recover it from an
+    # SE, a per-group 95% CI, or (for a common SD) a two-sided p-value. Mean±SE
+    # is one of the commonest reporting formats; without this the study is lost.
+    if m1 is not None and sd1 is None and n1:
+        if e.p_value is not None and m2 is not None and n2:
+            sd1 = sd_from_p_twogroup(e.p_value, m1, m2, n1, n2)
+            if sd1 is not None:
+                sd2 = sd2 if sd2 is not None else sd1
+                prov_extra = (prov_extra + "; " if prov_extra else "") + "SD from p-value"
+    if None not in (m1, n1, m2, n2) and (sd1 is None or sd2 is None):
+        # Fall back to CI/SE-derived SDs when only the difference CI is unknown
+        # but a per-arm dispersion can be inferred from the record's se field.
+        if sd1 is None and e.se is not None and n1:
+            sd1 = sd_from_se(e.se, n1)
+        if sd2 is None and sd1 is not None:
+            sd2 = sd1
+        if sd1 is not None and sd2 is not None and not prov_extra:
+            prov_extra = "SD recovered from reported dispersion"
 
     if None not in (m1, sd1, n1, m2, sd2, n2):
         d = hedges_g(m1, sd1, n1, m2, sd2, n2) if m == "SMD" \

@@ -7,32 +7,54 @@ from ..extraction_math import recompute
 from ..models import EffectEstimate, ExtractionRecord, Record
 from .base import Agent, obj
 
-# The numbers a meta-analysis needs live in the Methods, Results and tables —
-# never the References. A flat prefix truncation routinely cut them off. Keep a
-# generous window, but if the text is longer, prefer the results-bearing
-# sections over an arbitrary head slice.
+# The numbers a meta-analysis needs live in the Methods, Results, tables and the
+# auto-harvested statistics digest — never the References. A flat prefix
+# truncation routinely cut the tables (which are appended AFTER the body) off.
+# So: preserve the number-dense digest in full, drop the references, and give the
+# remaining budget to the results/methods-anchored body.
 _MAX_CHARS = 24000
+_DIGEST_CAP = 12000        # reserve for tables + captions + harvested statistics
 _RESULT_HEADS = re.compile(
     r"\n\s*(results|outcomes?|efficacy|findings|methods?|statistical analysis|"
     r"table\s+\d)\b", re.IGNORECASE)
+# Structured digest markers written by pdf_extract.as_working_text().
+_DIGEST_START = re.compile(
+    r"\n=== (EXTRACTED TABLES|FIGURE/TABLE CAPTIONS|REPORTED STATISTICS)", re.IGNORECASE)
+_REFS_MARKER = re.compile(
+    r"\n\s*(===\s*REFERENCES|references|bibliography)\b", re.IGNORECASE)
 
 
 def _relevant_text(text: str) -> str:
     text = text or ""
     if len(text) <= _MAX_CHARS:
         return text
-    # Drop everything from the reference list onward — it only wastes budget.
-    cut = re.search(r"\n\s*(references|bibliography)\s*\n", text, re.IGNORECASE)
-    if cut:
-        text = text[:cut.start()]
-        if len(text) <= _MAX_CHARS:
-            return text
-    # Anchor the window on the first results/methods heading so tables survive.
-    first = _RESULT_HEADS.search(text)
-    if first and first.start() > _MAX_CHARS // 3:
-        start = max(0, first.start() - _MAX_CHARS // 4)
-        return text[start:start + _MAX_CHARS]
-    return text[:_MAX_CHARS]
+
+    # Split off the appended structured digest (tables/captions/statistics) so it
+    # is never truncated away; the body is everything before it.
+    dm = _DIGEST_START.search(text)
+    body, digest = (text[:dm.start()], text[dm.start():]) if dm else (text, "")
+
+    # Drop the reference list from whichever part carries it — pure budget waste.
+    rb = _REFS_MARKER.search(body)
+    if rb:
+        body = body[:rb.start()]
+    rd = _REFS_MARKER.search(digest)
+    if rd:
+        digest = digest[:rd.start()]
+    digest = digest.strip()[:_DIGEST_CAP]
+    body = body.strip()
+
+    budget = _MAX_CHARS - len(digest) - 1        # -1 for the joining newline
+    if len(body) > budget:
+        first = _RESULT_HEADS.search(body)
+        if first and first.start() > budget // 3:
+            start = max(0, first.start() - budget // 4)
+            body = body[start:start + budget]
+        else:
+            body = body[:budget]
+    # body and digest are each within budget, so no further truncation clips the
+    # number-dense digest.
+    return (body + "\n" + digest) if digest else body
 
 _NUM = {"type": ["number", "null"]}
 _INT = {"type": ["integer", "null"]}
