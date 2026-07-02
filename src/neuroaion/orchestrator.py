@@ -314,8 +314,12 @@ class Orchestrator:
             decision = fulltext.assess(rec, full_text=self._text_for(rec.uid))
             ft = self._fulltext.get(rec.uid)
             if ft is not None:
-                # Record the provenance/quality of the report we assessed.
-                decision.full_text_retrieved = ft.retrieved or bool(ft.text)
+                # Record the provenance/quality of the report we assessed. Only a
+                # genuinely retrieved full text counts — the abstract fallback
+                # (ft.retrieved is False with non-empty ft.text) must NOT flip this
+                # flag, or PRISMA reports_not_retrieved/assessed are corrupted and
+                # a study could be "included" from its abstract alone.
+                decision.full_text_retrieved = ft.retrieved
                 if ft.source and ft.source != "none":
                     decision.notes = (decision.notes + f" [source: {ft.source}"
                                       + (f"/{ft.pmcid}" if ft.pmcid else "") + "]").strip()
