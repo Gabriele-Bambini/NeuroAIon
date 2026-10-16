@@ -1,9 +1,20 @@
-# NeuroAIon — full-auto PRISMA 2020 systematic-review engine
+# NeuroAIon
 
-> Stanzia 10 agenti Claude e produce una *systematic review* completa, conforme a
-> **PRISMA 2020**, in modalità **full-auto**: dalla domanda PICO al **paper LaTeX
-> redatto** (PDF) con formule, figure (diagramma di flusso + forest plot),
-> tabelle, checklist a 27 voci, meta-analisi e bibliografia.
+**Full-auto PRISMA 2020 systematic-review engine.**
+
+![License: MIT](https://img.shields.io/badge/license-MIT-blue)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Standard](https://img.shields.io/badge/reporting-PRISMA%202020-green)
+
+> Orchestrates eight specialised Claude agents and produces a complete systematic review
+> that conforms to **PRISMA 2020**, fully automatically: from the PICO question to a
+> drafted **LaTeX paper** (PDF) with equations, figures (flow diagram + forest plot),
+> tables, the 27-item checklist, meta-analysis and bibliography.
+
+**Contents:** [Agents](#the-eight-agents-each-mapped-to-prisma-2020-items) ·
+[Wizard](#setup-interface-wizard--any-protocol-your-folder) · [Quickstart](#quickstart) ·
+[Audit trail](#full-dossier--audit-trail-process-evidence) · [Honesty guarantees](#how-it-stays-honest) ·
+[Architecture](#architecture) · [Configuration](#configuration-env) · [Tests](#tests)
 
 A conductor orchestrates **eight specialised agents** (Claude Opus 4.8) through the
 entire systematic-review workflow. Every deterministic computation —
@@ -282,7 +293,7 @@ Disable retrieval (assess from abstracts only) with `--no-fulltext`.
 ```
 src/neuroaion/
 ├── orchestrator.py   # the conductor (concurrency, checkpoints, phase wiring)
-├── agents/           # the 10 agents (one module each)
+├── agents/           # the agents (one module each)
 ├── sources/          # PubMed, Europe PMC, Crossref, OpenAlex, bioRxiv clients
 ├── llm.py            # Anthropic provider (Opus 4.8, adaptive thinking,
 │                     #   structured outputs, prompt caching) + MockProvider
@@ -332,4 +343,4 @@ decisions.
 
 ---
 
-MIT-licensed. Built on the Claude Agent platform.
+MIT-licensed (see [`LICENSE`](LICENSE)). Built on the Claude Agent platform.
